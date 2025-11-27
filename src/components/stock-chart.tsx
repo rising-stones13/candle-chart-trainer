@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useMemo } from 'react';
-import { createChart, IChartApi, ISeriesApi, UTCTimestamp, Time, LineStyle, CrosshairMode, PriceScaleMode } from 'lightweight-charts';
+import { createChart, IChartApi, ISeriesApi, UTCTimestamp, Time, LineStyle, CrosshairMode, PriceScaleMode, LogicalRange } from 'lightweight-charts';
 import type { CandleData, LineData, Position, Trade, MAConfig } from '@/types';
 import { DraggableWindow } from './draggable-window';
 
@@ -53,7 +53,7 @@ const candleSeriesOptions = {
 function Chart({ data, title, isWeekly = false }: { data: CandleData[], title: string, isWeekly?: boolean }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'>>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -101,8 +101,8 @@ export function StockChart({
 }: StockChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'>>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'>>(null);
   const maSeriesRefs = useRef<Record<string, ISeriesApi<'Line'>>>({});
   
   const chartData = useMemo(() => {
@@ -142,13 +142,25 @@ export function StockChart({
   }, [isLogScale]);
 
   useEffect(() => {
-    if (candleSeriesRef.current && volumeSeriesRef.current) {
+    if (candleSeriesRef.current && volumeSeriesRef.current && chartRef.current) {
       candleSeriesRef.current.setData(chartData);
       const volumeData = chartData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)' }));
       volumeSeriesRef.current.setData(volumeData);
-      chartRef.current?.timeScale().fitContent();
+      
+      if (replayIndex === null) {
+        const dataLength = chartData.length;
+        if (dataLength > 0) {
+            const logicalRange: LogicalRange = {
+                from: Math.max(0, dataLength - 250), // Show approx. 1 year of daily data
+                to: dataLength,
+            };
+            chartRef.current.timeScale().setVisibleLogicalRange(logicalRange);
+        }
+      } else {
+         chartRef.current.timeScale().scrollToPosition(10, false);
+      }
     }
-  }, [chartData]);
+  }, [chartData, replayIndex]);
   
   useEffect(() => {
     if (!chartRef.current) return;
