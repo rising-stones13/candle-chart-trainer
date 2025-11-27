@@ -44,9 +44,11 @@ export function generateWeeklyData(dailyData: CandleData[]): CandleData[] {
 
   for (const day of dailyData) {
     const date = new Date(day.time as string);
-    const dayOfWeek = date.getUTCDay();
-    const weekStartDate = new Date(date);
-    weekStartDate.setUTCDate(date.getUTCDate() - dayOfWeek);
+    // Adjust for timezone offset to prevent day-of-week errors
+    const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
+    const dayOfWeek = adjustedDate.getUTCDay();
+    const weekStartDate = new Date(adjustedDate);
+    weekStartDate.setUTCDate(adjustedDate.getUTCDate() - dayOfWeek);
     const weekStartString = weekStartDate.toISOString().split('T')[0];
 
     if (!weeklyDataMap.has(weekStartString)) {
@@ -56,14 +58,14 @@ export function generateWeeklyData(dailyData: CandleData[]): CandleData[] {
         high: day.high,
         low: day.low,
         close: day.close,
-        volume: day.volume,
+        volume: day.volume || 0,
       });
     } else {
       const week = weeklyDataMap.get(weekStartString)!;
       week.high = Math.max(week.high, day.high);
       week.low = Math.min(week.low, day.low);
       week.close = day.close;
-      week.volume += day.volume;
+      week.volume = (week.volume || 0) + (day.volume || 0);
       // Also update time to be the last day of the week so far
       week.time = day.time;
     }

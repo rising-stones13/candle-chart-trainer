@@ -1,26 +1,26 @@
 'use client';
 
-import React, { useReducer, useCallback, useMemo } from 'react';
-import { getStockInfoFromFilename } from '@/app/actions';
+import React, { useReducer, useCallback, useMemo, useState, useEffect } from 'react';
+import { getStockData } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { parseCSV, generateWeeklyData, calculateMA } from '@/lib/data-helpers';
+import { generateWeeklyData, calculateMA } from '@/lib/data-helpers';
 import type { AppState, CandleData, MAConfig, Position, Trade } from '@/types';
 import { StockChart } from './stock-chart';
 import { ControlPanel } from './control-panel';
 import { TradePanel } from './trade-panel';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { PackageOpen, LineChart } from 'lucide-react';
+import { LineChart } from 'lucide-react';
 
 type Action =
   | { type: 'SET_CHART_DATA'; payload: { data: CandleData[]; title: string } }
-  | { type: 'START_REPLAY'; payload: number }
+  | { type: 'START_REPLAY'; payload: Date }
   | { type: 'NEXT_DAY' }
   | { type: 'TRADE'; payload: 'long' | 'short' }
   | { type: 'CLOSE_POSITION'; payload: string }
   | { type: 'TOGGLE_MA'; payload: string }
   | { type: 'TOGGLE_WEEKLY_CHART' }
   | { type: 'SET_ERROR'; payload: string }
-  | { type: 'TOGGLE_SCALE' };
+  | { type: 'TOGGLE_SCALE' }
+  | { type: 'SET_REPLAY_DATE'; payload: Date | null };
 
 const initialMAConfigs: Record<string, MAConfig> = {
   '5': { period: 5, color: '#2962FF', visible: true },
@@ -48,7 +48,7 @@ const initialState: AppState & { replayDate: Date | null, unrealizedPL: number, 
   isLogScale: false,
 };
 
-function reducer(state: typeof initialState, action: Action & { payload?: any }): typeof initialState {
+function reducer(state: typeof initialState, action: Action): typeof initialState {
   switch (action.type) {
     case 'SET_CHART_DATA': {
       const { data, title } = action.payload;
@@ -153,42 +153,39 @@ function reducer(state: typeof initialState, action: Action & { payload?: any })
   }
 }
 
-function reducerWithDate(state: typeof initialState, action: Action & { payload?: any }): typeof initialState {
-    if (action.type === 'SET_REPLAY_DATE') {
-        return { ...state, replayDate: action.payload };
-    }
-    return reducer(state, action);
-}
-
-
 export default function ChartTradeTrainer() {
-  const [state, dispatch] = useReducer(reducerWithDate, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const { toast } = useToast();
+  const [ticker, setTicker] = useState('7203');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const handleFetchData = useCallback(async () => {
+    if (!ticker) {
+      toast({ variant: 'destructive', title: 'エラー', description: '銘柄コードを入力してください。' });
+      return;
+    }
+    setIsLoading(true);
     try {
-      const text = await file.text();
-      const data = parseCSV(text);
-      if (data.length === 0) {
-        throw new Error("ファイルに有効なデータが含まれていません。");
-      }
-      
-      const stockInfo = await getStockInfoFromFilename(file.name);
-      if ('error' in stockInfo) {
-        toast({ variant: 'destructive', title: 'エラー', description: stockInfo.error });
-        dispatch({ type: 'SET_CHART_DATA', payload: { data, title: file.name } });
+      const result = await getStockData(ticker);
+      if ('error' in result) {
+        toast({ variant: 'destructive', title: 'エラー', description: result.error });
       } else {
-        const title = `${stockInfo.companyNameJapanese} (${stockInfo.tickerSymbol})`;
+        const { data, info } = result;
+        const title = `${info.companyNameJapanese} (${ticker})`;
         dispatch({ type: 'SET_CHART_DATA', payload: { data, title } });
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'ファイルの読み込みに失敗しました。';
+      const errorMessage = error instanceof Error ? error.message : 'データの取得に失敗しました。';
       toast({ variant: 'destructive', title: 'エラー', description: errorMessage });
+    } finally {
+        setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, ticker]);
+  
+  useEffect(() => {
+    handleFetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStartReplay = () => {
     if(state.replayDate) {
@@ -211,7 +208,6 @@ export default function ChartTradeTrainer() {
     />
   ), [state.chartData, state.weeklyData, state.maData, state.positions, state.tradeHistory, state.replayIndex, state.maConfigs, state.showWeeklyChart, state.isLogScale]);
 
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] lg:grid-cols-[320px_1fr_300px] h-screen max-h-screen overflow-hidden font-body">
       <aside className="border-r border-border flex flex-col h-screen">
@@ -222,10 +218,13 @@ export default function ChartTradeTrainer() {
           maConfigs={state.maConfigs}
           showWeeklyChart={state.showWeeklyChart}
           isLogScale={state.isLogScale}
-          onFileChange={handleFileChange}
+          ticker={ticker}
+          onTickerChange={setTicker}
+          onFetchData={handleFetchData}
+          isLoading={isLoading}
           onStartReplay={handleStartReplay}
           onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
-          onDateChange={(date) => dispatch({ type: 'SET_REPLAY_DATE', payload: date })}
+          onDateChange={(date) => dispatch({ type: 'SET_REPLAY_DATE', payload: date || null })}
           onMaToggle={(period) => dispatch({ type: 'TOGGLE_MA', payload: period })}
           onWeeklyChartToggle={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
           onScaleToggle={() => dispatch({ type: 'TOGGLE_SCALE' })}
@@ -237,13 +236,18 @@ export default function ChartTradeTrainer() {
           <h1 className="text-xl font-bold truncate">{state.chartTitle}</h1>
         </header>
         <div className="flex-grow relative">
-            {state.fileLoaded ? (
+            {isLoading && !state.fileLoaded ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <Loader2 className="w-16 h-16 mb-4 animate-spin" />
+                    <p>データを読み込んでいます...</p>
+                </div>
+            ) : state.fileLoaded ? (
                 chartComponent
             ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <LineChart className="w-24 h-24 mb-4" />
                     <h2 className="text-2xl font-semibold">ChartTrade Trainer</h2>
-                    <p>左のパネルからCSVファイルをアップロードして開始します。</p>
+                    <p>左のパネルから銘柄コードを入力してデータを取得します。</p>
                 </div>
             )}
         </div>

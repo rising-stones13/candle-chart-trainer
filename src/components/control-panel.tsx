@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, UploadCloud, Play, Settings2, Sigma } from 'lucide-react';
+import { CalendarIcon, Download, Play, Settings2, Sigma, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { MAConfig } from '@/types';
 
@@ -20,7 +20,10 @@ interface ControlPanelProps {
   maConfigs: Record<string, MAConfig>;
   showWeeklyChart: boolean;
   isLogScale: boolean;
-  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  ticker: string;
+  onTickerChange: (ticker: string) => void;
+  onFetchData: () => void;
+  isLoading: boolean;
   onStartReplay: () => void;
   onNextDay: () => void;
   onDateChange: (date?: Date) => void;
@@ -36,7 +39,10 @@ export function ControlPanel({
   maConfigs,
   showWeeklyChart,
   isLogScale,
-  onFileChange,
+  ticker,
+  onTickerChange,
+  onFetchData,
+  isLoading,
   onStartReplay,
   onNextDay,
   onDateChange,
@@ -44,7 +50,6 @@ export function ControlPanel({
   onWeeklyChartToggle,
   onScaleToggle,
 }: ControlPanelProps) {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   return (
     <Card className="h-full flex flex-col">
@@ -54,12 +59,22 @@ export function ControlPanel({
       <CardContent className="p-4 flex-grow flex flex-col gap-6 overflow-y-auto">
         
         <div>
-          <Label htmlFor="file-upload" className="text-base font-semibold">1. データ読み込み</Label>
-          <Input id="file-upload" type="file" accept=".csv,.json" onChange={onFileChange} ref={fileInputRef} className="hidden" />
-          <Button onClick={() => fileInputRef.current?.click()} className="w-full mt-2">
-            <UploadCloud className="mr-2 h-4 w-4" />
-            CSV/JSONファイルを選択
-          </Button>
+          <Label htmlFor="ticker-input" className="text-base font-semibold">1. データ読み込み</Label>
+          <div className="flex w-full items-center space-x-2 mt-2">
+            <Input 
+              id="ticker-input" 
+              type="text" 
+              placeholder="例: 7203" 
+              value={ticker}
+              onChange={(e) => onTickerChange(e.target.value)}
+              disabled={isLoading}
+            />
+            <Button onClick={onFetchData} disabled={isLoading || !ticker}>
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              {isLoading ? '' : '取得'}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">東証の銘柄コードを入力してください。</p>
         </div>
         
         <Separator />
