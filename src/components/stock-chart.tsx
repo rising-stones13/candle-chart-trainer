@@ -137,7 +137,7 @@ export function StockChart({
   
   useEffect(() => {
     if (chartRef.current) {
-      chartRef.current.priceScale().applyOptions({ mode: isLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal });
+      chartRef.current.priceScale('right').applyOptions({ mode: isLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal });
     }
   }, [isLogScale]);
 
