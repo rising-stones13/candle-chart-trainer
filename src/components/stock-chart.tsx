@@ -177,7 +177,6 @@ export function StockChart({
     
     const allMarkers = [...positions, ...tradeHistory];
     const markers = allMarkers.map(p => {
-        const isEntry = 'entryPrice' in p && !('exitPrice' in p);
         const isTrade = 'exitPrice' in p;
 
         if (isTrade) {
@@ -191,8 +190,14 @@ export function StockChart({
         const position = p as Position;
         return { time: position.entryDate, position: position.type === 'long' ? 'belowBar' : 'aboveBar', color: position.type === 'long' ? chartColors.upColor : chartColors.downColor, shape: 'circle' as const, text: `${position.type.charAt(0).toUpperCase()}` };
     }).flat();
+
+    const sortedMarkers = markers.sort((a, b) => {
+        const timeA = new Date(a.time as string).getTime();
+        const timeB = new Date(b.time as string).getTime();
+        return timeA - timeB;
+    });
     
-    candleSeriesRef.current.setMarkers(markers);
+    candleSeriesRef.current.setMarkers(sortedMarkers);
     
   }, [positions, tradeHistory]);
 
