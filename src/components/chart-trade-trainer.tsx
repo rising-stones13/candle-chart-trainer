@@ -10,7 +10,9 @@ import { ControlPanel } from './control-panel';
 import { TradePanel } from './trade-panel';
 import { LineChart, Loader2 } from 'lucide-react';
 import { MaSettingsPanel } from './ma-settings-panel';
-import { Sheet } from '@/components/ui/sheet';
+import { Sheet, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from './ui/button';
+import { Sigma } from 'lucide-react';
 
 type Action =
   | { type: 'SET_CHART_DATA'; payload: { data: CandleData[]; title: string } }
@@ -217,7 +219,13 @@ export default function ChartTradeTrainer() {
             onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
             onDateChange={(date) => dispatch({ type: 'SET_REPLAY_DATE', payload: date || null })}
             onWeeklyChartToggle={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
-          />
+          >
+            <SheetTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <Sigma className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+          </ControlPanel>
         </aside>
 
         <main className="flex flex-col h-screen bg-background">
@@ -240,6 +248,8 @@ export default function ChartTradeTrainer() {
                   maConfigs={state.maConfigs}
                   showWeeklyChart={state.showWeeklyChart}
                   onCloseWeeklyChart={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
+                  isReplay={state.isReplay}
+                  replayIndex={state.replayIndex}
                 />
               ) : (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -251,7 +261,7 @@ export default function ChartTradeTrainer() {
           </div>
         </main>
 
-        <aside className="border-l border-border flex-col h-screen hidden lg:flex">
+        <aside className="border-l border-border flex-col h-screen lg:flex">
           <TradePanel
               isReplay={state.isReplay}
               positions={state.positions}

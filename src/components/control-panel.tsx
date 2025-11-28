@@ -9,9 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, Download, Play, Settings2, Sigma, Loader2 } from 'lucide-react';
+import { CalendarIcon, Download, Play, Settings2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { SheetTrigger } from '@/components/ui/sheet';
 
 interface ControlPanelProps {
   fileLoaded: boolean;
@@ -26,6 +25,7 @@ interface ControlPanelProps {
   onNextDay: () => void;
   onDateChange: (date?: Date) => void;
   onWeeklyChartToggle: () => void;
+  children: React.ReactNode;
 }
 
 export function ControlPanel({
@@ -41,6 +41,7 @@ export function ControlPanel({
   onNextDay,
   onDateChange,
   onWeeklyChartToggle,
+  children,
 }: ControlPanelProps) {
 
   return (
@@ -108,11 +109,7 @@ export function ControlPanel({
               <Switch id="weekly-chart-toggle" checked={showWeeklyChart} onCheckedChange={onWeeklyChartToggle} />
             </div>
             
-             <SheetTrigger asChild>
-              <Button variant="outline" className="w-full">
-                <Sigma className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
+             {children}
           </div>
         </div>
       </CardContent>
