@@ -6,16 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Download, Settings2, Loader2, Sigma, Palette } from 'lucide-react';
+import { Settings2, Sigma, Palette } from 'lucide-react';
 import { SidebarHeader, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from './ui/sidebar';
 
 interface ControlPanelProps {
   fileLoaded: boolean;
   showWeeklyChart: boolean;
-  ticker: string;
-  onTickerChange: (ticker: string) => void;
-  onFetchData: () => void;
-  isLoading: boolean;
   onWeeklyChartToggle: () => void;
   onMaSettingsToggle: () => void;
   upColor: string;
@@ -26,10 +22,6 @@ interface ControlPanelProps {
 export function ControlPanel({
   fileLoaded,
   showWeeklyChart,
-  ticker,
-  onTickerChange,
-  onFetchData,
-  isLoading,
   onWeeklyChartToggle,
   onMaSettingsToggle,
   upColor,
@@ -42,29 +34,6 @@ export function ControlPanel({
         <h2 className="text-lg font-semibold sr-only">コントロールパネル</h2>
       </SidebarHeader>
       <div className="flex-grow overflow-y-auto">
-        <SidebarGroup>
-          <SidebarGroupLabel>データ読み込み</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="flex w-full items-center space-x-2">
-              <Input
-                id="ticker-input"
-                type="text"
-                placeholder="例: 7203"
-                value={ticker}
-                onChange={(e) => onTickerChange(e.target.value)}
-                disabled={isLoading}
-              />
-              <Button onClick={onFetchData} disabled={isLoading || !ticker} size="sm">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                {isLoading ? '' : '取得'}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">東証の銘柄コードを入力してください。</p>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <Separator />
-
         <SidebarGroup className={!fileLoaded ? 'opacity-50 pointer-events-none' : ''}>
           <SidebarGroupLabel>表示設定</SidebarGroupLabel>
           <SidebarGroupContent className="space-y-4">

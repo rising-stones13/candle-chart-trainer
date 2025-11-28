@@ -8,10 +8,11 @@ import type { AppState, CandleData, MAConfig, Position, Trade } from '@/types';
 import { StockChart } from './stock-chart';
 import { ControlPanel } from './control-panel';
 import { TradePanel } from './trade-panel';
-import { LineChart, Loader2, Menu } from 'lucide-react';
+import { LineChart, Loader2, Menu, Download } from 'lucide-react';
 import { MaSettingsPanel } from './ma-settings-panel';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 type Action =
   | { type: 'SET_CHART_DATA'; payload: { data: CandleData[]; title: string } }
@@ -251,10 +252,6 @@ export default function ChartTradeTrainer() {
                   <ControlPanel
                     fileLoaded={state.fileLoaded}
                     showWeeklyChart={state.showWeeklyChart}
-                    ticker={ticker}
-                    onTickerChange={setTicker}
-                    onFetchData={() => handleFetchData(ticker)}
-                    isLoading={isLoading}
                     onWeeklyChartToggle={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
                     onMaSettingsToggle={() => setIsMaSettingsOpen(true)}
                     upColor={state.upColor}
@@ -264,6 +261,25 @@ export default function ChartTradeTrainer() {
                 </div>
             </SheetContent>
           </Sheet>
+
+          <div className="flex items-center gap-2">
+            <Input
+              id="ticker-input"
+              type="text"
+              placeholder="例: 7203"
+              value={ticker}
+              onChange={(e) => setTicker(e.target.value)}
+              disabled={isLoading}
+              className="w-24"
+            />
+            <Button onClick={() => handleFetchData(ticker)} disabled={isLoading || !ticker} size="sm">
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              {isLoading ? '' : '取得'}
+            </Button>
+          </div>
+          
+          <div className="border-l border-border h-6 mx-2"></div>
+
           <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>
       </header>
 
