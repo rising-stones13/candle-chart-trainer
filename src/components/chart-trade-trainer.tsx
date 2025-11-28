@@ -248,12 +248,12 @@ export default function ChartTradeTrainer() {
               <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>
           </header>
 
-          <div className="flex-1 flex flex-col lg:flex-row overflow-auto">
-            <main className="flex flex-col bg-background overflow-auto flex-1">
+          <div className="flex-1 flex flex-col lg:flex-row">
+            <main className="flex flex-col bg-background flex-1 lg:border-r">
               <header className="p-4 border-b border-border hidden lg:block">
                 <h1 className="text-xl font-bold truncate">{state.chartTitle}</h1>
               </header>
-              <div className="flex-grow relative">
+              <div className="flex-grow relative h-[calc(100vh-280px)] lg:h-auto">
                 {isLoading && !state.fileLoaded ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <Loader2 className="w-16 h-16 mb-4 animate-spin" />
@@ -281,7 +281,7 @@ export default function ChartTradeTrainer() {
               </div>
             </main>
 
-            <aside className="lg:border-l lg:border-border flex-col flex shrink-0 lg:w-[300px]">
+            <aside className="lg:border-l lg:border-border flex-col flex shrink-0 lg:w-[300px] h-[240px] lg:h-auto">
               <TradePanel
                 isReplay={state.isReplay}
                 positions={state.positions}
