@@ -62,7 +62,7 @@ function reducer(state: typeof initialState, action: Action): typeof initialStat
         ...initialState,
         chartData: data,
         weeklyData: generateWeeklyData(data),
-        maData,
+        maData: maData,
         chartTitle: title,
         fileLoaded: true,
       };
@@ -86,18 +86,19 @@ function reducer(state: typeof initialState, action: Action): typeof initialStat
       return { ...state, replayIndex: newIndex, unrealizedPL };
     }
     case 'TRADE': {
-      if (state.replayIndex === null) return state;
-      const type = action.payload as 'long' | 'short';
-      const currentData = state.chartData[state.replayIndex];
-      const newPosition: Position = {
-        id: crypto.randomUUID(),
-        type,
-        entryPrice: currentData.close,
-        size: 100, // Fixed size
-        entryDate: currentData.time,
-        entryIndex: state.replayIndex,
-      };
-      return { ...state, positions: [...state.positions, newPosition] };
+        if (state.replayIndex === null) return state;
+        const type = action.payload;
+        const currentData = state.chartData[state.replayIndex];
+        
+        const newPosition: Position = {
+            id: crypto.randomUUID(),
+            type,
+            entryPrice: currentData.close,
+            size: 100, // Fixed size for now
+            entryDate: currentData.time,
+            entryIndex: state.replayIndex,
+        };
+        return { ...state, positions: [...state.positions, newPosition] };
     }
     case 'CLOSE_POSITION': {
       if (state.replayIndex === null) return state;
