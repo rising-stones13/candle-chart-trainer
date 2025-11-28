@@ -71,7 +71,7 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
     }
     case 'START_REPLAY': {
       const date = action.payload as Date;
-      const startIndex = state.chartData.findIndex(d => new Date(d.time as string) >= date);
+      const startIndex = state.chartData.findIndex(d => new Date((d.time as number) * 1000) >= date);
       if (startIndex === -1) return state; // Or show error
       return { ...state, replayIndex: startIndex, isReplay: true, positions: [], tradeHistory: [], realizedPL: 0, unrealizedPL: 0 };
     }
@@ -391,7 +391,7 @@ export default function ChartTradeTrainer() {
           <TradePanel
             fileLoaded={state.fileLoaded}
             isReplay={state.isReplay}
-            replayDate={state.isReplay && state.replayIndex !== null ? new Date(state.chartData[state.replayIndex].time as string) : null}
+            replayDate={state.isReplay && state.replayIndex !== null ? new Date((state.chartData[state.replayIndex].time as number) * 1000) : null}
             positions={state.positions}
             realizedPL={state.realizedPL}
             unrealizedPL={state.unrealizedPL}
