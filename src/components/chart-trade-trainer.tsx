@@ -210,7 +210,7 @@ export default function ChartTradeTrainer() {
 
   return (
     <SidebarProvider>
-      <div className="flex flex-col lg:flex-row min-h-screen font-body bg-background text-foreground">
+      <div className="flex flex-col lg:flex-row h-screen font-body bg-background text-foreground overflow-hidden">
         <Sidebar>
           <Sheet open={isMaSettingsOpen} onOpenChange={setIsMaSettingsOpen}>
             <SidebarContent className="p-0">
@@ -244,18 +244,18 @@ export default function ChartTradeTrainer() {
           </Sheet>
         </Sidebar>
 
-        <div className="flex flex-col flex-1">
-          <header className="p-2 border-b border-border flex items-center gap-2 lg:hidden">
+        <div className="flex flex-col flex-1 min-h-0">
+          <header className="p-2 border-b border-border flex items-center gap-2 lg:hidden flex-shrink-0">
               <SidebarTrigger><Menu /></SidebarTrigger>
               <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>
           </header>
 
-          <div className="flex-1 flex flex-col lg:flex-row">
-            <main className="flex flex-col bg-background flex-1 lg:border-r">
-              <header className="p-4 border-b border-border hidden lg:block">
+          <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+            <main className="flex flex-col bg-background flex-1 lg:border-r min-h-0">
+              <header className="p-4 border-b border-border hidden lg:block flex-shrink-0">
                 <h1 className="text-xl font-bold truncate">{state.chartTitle}</h1>
               </header>
-              <div className="flex-grow relative h-[calc(100vh-280px)] lg:h-auto">
+              <div className="flex-grow relative">
                 {isLoading && !state.fileLoaded ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <Loader2 className="w-16 h-16 mb-4 animate-spin" />
@@ -283,7 +283,7 @@ export default function ChartTradeTrainer() {
               </div>
             </main>
 
-            <aside className="lg:border-l lg:border-border flex-col flex shrink-0 lg:w-[300px] h-[240px] lg:h-auto">
+            <aside className="lg:border-l lg:border-border flex-none flex flex-col shrink-0 lg:w-[300px]">
               <TradePanel
                 isReplay={state.isReplay}
                 positions={state.positions}
