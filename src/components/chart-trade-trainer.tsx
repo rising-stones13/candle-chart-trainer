@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useReducer, useCallback, useMemo, useState, useRef } from 'react';
-import { getStockInfoFromFilename } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { generateWeeklyData, parseCSV } from '@/lib/data-helpers';
+import { generateWeeklyData, parseStockData } from '@/lib/data-helpers';
 import type { AppState, CandleData, MAConfig, Position, Trade, PositionEntry } from '@/types';
 import { StockChart } from './stock-chart';
 import { ControlPanel } from './control-panel';
@@ -240,19 +239,10 @@ export default function ChartTradeTrainer() {
 
     setIsLoading(true);
     try {
-      const stockInfoPromise = getStockInfoFromFilename(file.name);
-      const fileContentPromise = file.text();
-      
-      const [stockInfoResult, csvText] = await Promise.all([stockInfoPromise, fileContentPromise]);
+      const fileContent = await file.text();
+      const { data, meta } = parseStockData(fileContent);
 
-      const data = parseCSV(csvText);
-
-      let title = file.name;
-      if ('tickerSymbol' in stockInfoResult) {
-        title = `${stockInfoResult.companyNameJapanese} (${stockInfoResult.tickerSymbol})`;
-      } else {
-         toast({ variant: 'destructive', title: 'AIによる銘柄特定失敗', description: stockInfoResult.error });
-      }
+      const title = meta.longName ? `${meta.longName} (${meta.symbol})` : file.name;
 
       dispatch({ type: 'SET_CHART_DATA', payload: { data, title } });
 
@@ -353,7 +343,7 @@ export default function ChartTradeTrainer() {
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept=".csv"
+              accept=".json"
               style={{ display: 'none' }}
               disabled={isLoading}
             />
@@ -390,7 +380,7 @@ export default function ChartTradeTrainer() {
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                 <LineChart className="w-24 h-24 mb-4" />
                 <h2 className="text-2xl font-semibold">ChartTrade Trainer</h2>
-                <p>右上の「ファイルを開く」から株価データ(CSV)を読み込みます。</p>
+                <p>右上の「ファイルを開く」から株価データ(JSON)を読み込みます。</p>
               </div>
             )}
           </div>

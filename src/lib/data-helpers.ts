@@ -1,42 +1,101 @@
 import type { CandleData, LineData } from '@/types';
 import { Time } from 'lightweight-charts';
 
-export function parseCSV(csvText: string): CandleData[] {
-  const lines = csvText.split('\n').filter(line => line.trim() !== '');
-  if (lines.length < 2) {
-    throw new Error('CSVファイルにデータがありません。');
-  }
-  
-  const headers = lines.shift()!.toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
-  
-  const dateIndex = headers.indexOf('date');
-  const openIndex = headers.indexOf('open');
-  const highIndex = headers.indexOf('high');
-  const lowIndex = headers.indexOf('low');
-  const closeIndex = headers.indexOf('close');
-  const volumeIndex = headers.indexOf('volume');
-
-  if ([dateIndex, openIndex, highIndex, lowIndex, closeIndex, volumeIndex].includes(-1)) {
-    throw new Error('CSVヘッダーが無効です。Date, Open, High, Low, Close, Volume を含めてください。');
-  }
-
-  return lines.map(line => {
-    const values = line.split(',');
-    const dateStr = values[dateIndex]?.trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return null;
-    }
-    return {
-      time: dateStr as Time,
-      open: parseFloat(values[openIndex]),
-      high: parseFloat(values[highIndex]),
-      low: parseFloat(values[lowIndex]),
-      close: parseFloat(values[closeIndex]),
-      volume: parseInt(values[volumeIndex], 10),
-    };
-  }).filter((d): d is CandleData => d !== null && !isNaN(d.open) && !!d.time)
-    .sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime());
+// This is a simplified interface for what we expect from the Yahoo Finance v7 API response
+interface YahooFinanceChartResult {
+  chart: {
+    result: {
+      meta: {
+        currency: string;
+        symbol: string;
+        exchangeName: string;
+        instrumentType: string;
+        firstTradeDate: number;
+        regularMarketTime: number;
+        gmtoffset: number;
+        timezone: string;
+        exchangeTimezoneName: string;
+        regularMarketPrice: number;
+        chartPreviousClose: number;
+        previousClose: number;
+        scale: number;
+        priceHint: number;
+        longName?: string;
+        shortName?: string;
+      };
+      timestamp: number[];
+      indicators: {
+        quote: {
+          high: (number | null)[];
+          close: (number | null)[];
+          low: (number | null)[];
+          volume: (number | null)[];
+          open: (number | null)[];
+        }[];
+      };
+    }[];
+    error: any;
+  };
 }
+
+
+export function parseStockData(jsonText: string): { data: CandleData[], meta: YahooFinanceChartResult['chart']['result'][0]['meta'] } {
+  const jsonData: YahooFinanceChartResult = JSON.parse(jsonText);
+  
+  if (jsonData.chart.error) {
+    throw new Error(`Chart data error: ${jsonData.chart.error.description}`);
+  }
+  
+  if (!jsonData.chart.result || jsonData.chart.result.length === 0) {
+    throw new Error('No chart data found in the file.');
+  }
+
+  const result = jsonData.chart.result[0];
+  const timestamps = result.timestamp;
+  const quote = result.indicators.quote[0];
+
+  if (!timestamps || !quote) {
+    throw new Error('Invalid data format: timestamps or quotes are missing.');
+  }
+  
+  const candleData: CandleData[] = [];
+  for (let i = 0; i < timestamps.length; i++) {
+    // Skip if any of the crucial values are null or missing
+    if (
+      timestamps[i] == null ||
+      quote.open[i] == null ||
+      quote.high[i] == null ||
+      quote.low[i] == null ||
+      quote.close[i] == null ||
+      quote.volume[i] == null
+    ) {
+      continue;
+    }
+    
+    // Convert UNIX timestamp (seconds) to YYYY-MM-DD string
+    const date = new Date(timestamps[i] * 1000);
+    const year = date.getUTCFullYear();
+    const month = ('0' + (date.getUTCMonth() + 1)).slice(-2);
+    const day = ('0' + date.getUTCDate()).slice(-2);
+    const timeStr = `${year}-${month}-${day}`;
+
+    candleData.push({
+      time: timeStr as Time,
+      open: quote.open[i]!,
+      high: quote.high[i]!,
+      low: quote.low[i]!,
+      close: quote.close[i]!,
+      volume: quote.volume[i]!,
+    });
+  }
+
+  // Sort just in case and remove duplicates
+  const uniqueData = Array.from(new Map(candleData.map(item => [item.time, item])).values())
+    .sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime());
+
+  return { data: uniqueData, meta: result.meta };
+}
+
 
 export function generateWeeklyData(dailyData: CandleData[]): CandleData[] {
   if (dailyData.length === 0) return [];
