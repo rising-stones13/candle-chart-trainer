@@ -110,8 +110,7 @@ export function ControlPanel({
             
              <SheetTrigger asChild>
               <Button variant="outline" className="w-full">
-                <Sigma className="mr-2 h-4 w-4" />
-                移動平均線 設定
+                <Sigma className="h-4 w-4" />
               </Button>
             </SheetTrigger>
           </div>
