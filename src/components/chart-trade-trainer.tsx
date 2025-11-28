@@ -8,10 +8,11 @@ import type { AppState, CandleData, MAConfig, Position, Trade, PositionEntry } f
 import { StockChart } from './stock-chart';
 import { ControlPanel } from './control-panel';
 import { TradePanel } from './trade-panel';
-import { LineChart, Loader2, Menu, Download } from 'lucide-react';
+import { LineChart, Loader2, Menu, Download, AreaChart } from 'lucide-react';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 type Action =
   | { type: 'SET_CHART_DATA'; payload: { data: CandleData[]; title: string } }
@@ -307,8 +308,6 @@ export default function ChartTradeTrainer() {
                 <div className="p-4">
                   <ControlPanel
                     fileLoaded={state.fileLoaded}
-                    showWeeklyChart={state.showWeeklyChart}
-                    onWeeklyChartToggle={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
                     upColor={state.upColor}
                     downColor={state.downColor}
                     onCandleColorChange={handleSetCandleColor}
@@ -319,6 +318,26 @@ export default function ChartTradeTrainer() {
             </SheetContent>
           </Sheet>
           
+          <div className="border-l border-border h-6 mx-2"></div>
+          
+          <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
+                        disabled={!state.fileLoaded}
+                    >
+                        <AreaChart />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>週足</p>
+                </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           <div className="border-l border-border h-6 mx-2"></div>
 
           <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>

@@ -3,16 +3,14 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings2, Sigma, Palette } from 'lucide-react';
-import { SidebarHeader, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from './ui/sidebar';
+import { Sigma, Palette } from 'lucide-react';
+import { SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from './ui/sidebar';
 import type { MAConfig } from '@/types';
 import { Input } from './ui/input';
 import { Separator } from './ui/separator';
 
 interface ControlPanelProps {
   fileLoaded: boolean;
-  showWeeklyChart: boolean;
-  onWeeklyChartToggle: () => void;
   upColor: string;
   downColor: string;
   onCandleColorChange: (target: 'upColor' | 'downColor', color: string) => void;
@@ -22,8 +20,6 @@ interface ControlPanelProps {
 
 export function ControlPanel({
   fileLoaded,
-  showWeeklyChart,
-  onWeeklyChartToggle,
   upColor,
   downColor,
   onCandleColorChange,
@@ -32,23 +28,10 @@ export function ControlPanel({
 }: ControlPanelProps) {
   return (
     <div className="flex flex-col h-full">
-      <SidebarHeader>
-        <h2 className="text-lg font-semibold sr-only">コントロールパネル</h2>
-      </SidebarHeader>
       <div className="flex-grow overflow-y-auto">
         <SidebarGroup className={!fileLoaded ? 'opacity-50 pointer-events-none' : ''}>
           <SidebarGroupLabel>表示設定</SidebarGroupLabel>
           <SidebarGroupContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="weekly-chart-toggle" className="flex items-center gap-2">
-                <Settings2 className="h-4 w-4" />
-                週足チャート表示
-              </Label>
-              <Switch id="weekly-chart-toggle" checked={showWeeklyChart} onCheckedChange={onWeeklyChartToggle} />
-            </div>
-            
-            <Separator />
-            
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Palette className="h-4 w-4" />
