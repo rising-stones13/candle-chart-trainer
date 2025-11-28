@@ -163,24 +163,32 @@ export function StockChart({
   }, [chartData, replayIndex]);
   
   useEffect(() => {
-    if (!chartRef.current) return;
-    
+    if (!chartRef.current || !maData) return;
+
+    const lastVisibleTime = chartData.length > 0 ? new Date(chartData[chartData.length - 1].time as string).getTime() : null;
+
     Object.values(maConfigs).forEach(config => {
-      const period = config.period.toString();
-      let series = maSeriesRefs.current[period];
-      if (!series) {
-        series = chartRef.current!.addLineSeries({
-          color: config.color,
-          lineWidth: 2,
-          lastValueVisible: false,
-          priceLineVisible: false,
-        });
-        maSeriesRefs.current[period] = series;
-      }
-      
-      const dataForMa = replayIndex !== null ? maData[period]?.filter(d => (new Date(d.time as string) <= new Date(chartData[chartData.length - 1].time as string))) : maData[period];
-      series.setData(dataForMa || []);
-      series.applyOptions({ visible: config.visible });
+        const period = config.period.toString();
+        let series = maSeriesRefs.current[period];
+
+        if (!series) {
+            series = chartRef.current!.addLineSeries({
+                color: config.color,
+                lineWidth: 2,
+                lastValueVisible: false,
+                priceLineVisible: false,
+            });
+            maSeriesRefs.current[period] = series;
+        }
+
+        let dataForMa = maData[period] || [];
+
+        if (lastVisibleTime !== null) {
+            dataForMa = dataForMa.filter(d => new Date(d.time as string).getTime() <= lastVisibleTime);
+        }
+        
+        series.setData(dataForMa);
+        series.applyOptions({ visible: config.visible });
     });
   }, [maData, maConfigs, chartData, replayIndex]);
   
