@@ -25,7 +25,7 @@ export function TradePanel({ isReplay, positions, realizedPL, unrealizedPL, onTr
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="p-4">
+      <CardHeader className="px-4 py-2">
         <CardTitle className="text-lg">模擬トレード</CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4 flex flex-col">
@@ -55,31 +55,31 @@ export function TradePanel({ isReplay, positions, realizedPL, unrealizedPL, onTr
         </div>
 
         <div className="flex-grow flex flex-col mt-2">
-            <h3 className="text-md font-semibold mb-1">保有ポジション</h3>
+            <h3 className="text-md font-semibold">保有ポジション</h3>
             <ScrollArea className="flex-grow">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>種別</TableHead>
-                            <TableHead>単価</TableHead>
-                            <TableHead>数量</TableHead>
-                            <TableHead></TableHead>
+                            <TableHead className="h-8 px-2">種別</TableHead>
+                            <TableHead className="h-8 px-2">単価</TableHead>
+                            <TableHead className="h-8 px-2">数量</TableHead>
+                            <TableHead className="h-8 px-2"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {positions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground py-2">ポジションがありません</TableCell>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground py-1">ポジションがありません</TableCell>
                             </TableRow>
                         ) : (
                             positions.map(pos => (
                                 <TableRow key={pos.id}>
-                                    <TableCell className={pos.type === 'long' ? 'text-blue-400' : 'text-red-400'}>
+                                    <TableCell className={`p-2 ${pos.type === 'long' ? 'text-blue-400' : 'text-red-400'}`}>
                                         {pos.type === 'long' ? '買い' : '売り'}
                                     </TableCell>
-                                    <TableCell>{formatCurrency(pos.entryPrice)}</TableCell>
-                                    <TableCell>{pos.size}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="p-2">{formatCurrency(pos.entryPrice)}</TableCell>
+                                    <TableCell className="p-2">{pos.size}</TableCell>
+                                    <TableCell className="p-2">
                                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onClosePosition(pos.id)} disabled={!isReplay}>
                                             <X className="h-4 w-4"/>
                                         </Button>
