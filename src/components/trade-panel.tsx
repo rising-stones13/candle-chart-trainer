@@ -30,11 +30,11 @@ export function TradePanel({ isReplay, positions, realizedPL, unrealizedPL, onTr
       </CardHeader>
       <CardContent className="px-4 pb-4 flex flex-col">
         <div className="grid grid-cols-2 gap-2 mb-1">
-          <Button onClick={() => onTrade('long')} disabled={!isReplay} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
-            <ArrowUp className="mr-2 h-4 w-4" /> 買い
+          <Button onClick={() => onTrade('long')} disabled={!isReplay} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-2" size="sm">
+            <ArrowUp className="mr-1 h-4 w-4" /> 買い
           </Button>
-          <Button onClick={() => onTrade('short')} disabled={!isReplay} className="bg-red-600 hover:bg-red-700 text-white" size="sm">
-            <ArrowDown className="mr-2 h-4 w-4" /> 空売り
+          <Button onClick={() => onTrade('short')} disabled={!isReplay} className="bg-red-600 hover:bg-red-700 text-white h-8 px-2" size="sm">
+            <ArrowDown className="mr-1 h-4 w-4" /> 空売り
           </Button>
         </div>
         
