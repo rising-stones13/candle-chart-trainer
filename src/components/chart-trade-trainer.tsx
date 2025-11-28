@@ -40,6 +40,13 @@ type AppStateWithLocal = AppState & {
   realizedPL: number,
 };
 
+const calculateAveragePrice = (positions: Position[], type: 'long' | 'short'): number => {
+  const targetPositions = positions.filter(p => p.type === type);
+  if (targetPositions.length === 0) return 0;
+  const totalCost = targetPositions.reduce((sum, p) => sum + p.entryPrice * p.size, 0);
+  const totalSize = targetPositions.reduce((sum, p) => sum + p.size, 0);
+  return totalCost / totalSize;
+};
 
 const initialState: AppStateWithLocal = {
   chartData: [],
@@ -54,6 +61,8 @@ const initialState: AppStateWithLocal = {
   tradeHistory: [],
   realizedPL: 0,
   unrealizedPL: 0,
+  avgBuyPrice: 0,
+  avgSellPrice: 0,
   maConfigs: initialMAConfigs,
   showWeeklyChart: false,
   upColor: '#ef5350',
@@ -81,7 +90,7 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
       const startIndex = state.chartData.findIndex(d => new Date(d.time as string) >= date);
       if (startIndex === -1) return state; // Or show error
       const currentReplayDate = state.chartData[startIndex].time as string;
-      return { ...state, replayIndex: startIndex, isReplay: true, replayDate: date, currentReplayDate, positions: [], tradeHistory: [], realizedPL: 0, unrealizedPL: 0 };
+      return { ...state, replayIndex: startIndex, isReplay: true, replayDate: date, currentReplayDate, positions: [], tradeHistory: [], realizedPL: 0, unrealizedPL: 0, avgBuyPrice: 0, avgSellPrice: 0, };
     }
     case 'NEXT_DAY': {
       if (state.replayIndex === null || state.replayIndex >= state.chartData.length - 1) {
@@ -109,7 +118,11 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
             entryDate: currentData.time,
             entryIndex: state.replayIndex,
         };
-        return { ...state, positions: [...state.positions, newPosition] };
+        const newPositions = [...state.positions, newPosition];
+        const avgBuyPrice = calculateAveragePrice(newPositions, 'long');
+        const avgSellPrice = calculateAveragePrice(newPositions, 'short');
+        
+        return { ...state, positions: newPositions, avgBuyPrice, avgSellPrice };
     }
     case 'CLOSE_POSITION': {
       if (state.replayIndex === null) return state;
@@ -137,12 +150,17 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
         return acc + pl;
       }, 0);
 
+      const avgBuyPrice = calculateAveragePrice(newPositions, 'long');
+      const avgSellPrice = calculateAveragePrice(newPositions, 'short');
+
       return {
         ...state,
         positions: newPositions,
         tradeHistory: [...state.tradeHistory, newTrade],
         realizedPL: newRealizedPL,
         unrealizedPL: newUnrealizedPL,
+        avgBuyPrice,
+        avgSellPrice,
       };
     }
     case 'TOGGLE_MA':
@@ -167,6 +185,8 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
         realizedPL: 0,
         unrealizedPL: 0,
         currentReplayDate: null,
+        avgBuyPrice: 0,
+        avgSellPrice: 0,
       };
     case 'SET_CANDLE_COLOR':
       return {
@@ -324,6 +344,8 @@ export default function ChartTradeTrainer() {
             positions={state.positions}
             realizedPL={state.realizedPL}
             unrealizedPL={state.unrealizedPL}
+            avgBuyPrice={state.avgBuyPrice}
+            avgSellPrice={state.avgSellPrice}
             onTrade={(type) => dispatch({ type: 'TRADE', payload: type })}
             onClosePosition={(id) => dispatch({ type: 'CLOSE_POSITION', payload: id })}
             onStartReplay={handleStartReplay}

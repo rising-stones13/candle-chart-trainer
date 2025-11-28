@@ -19,6 +19,8 @@ interface TradePanelProps {
   positions: Position[];
   realizedPL: number;
   unrealizedPL: number;
+  avgBuyPrice: number;
+  avgSellPrice: number;
   onTrade: (type: 'long' | 'short') => void;
   onClosePosition: (positionId: string) => void;
   onStartReplay: () => void;
@@ -34,6 +36,8 @@ export function TradePanel({
   positions, 
   realizedPL, 
   unrealizedPL, 
+  avgBuyPrice,
+  avgSellPrice,
   onTrade, 
   onClosePosition,
   onStartReplay,
@@ -41,7 +45,7 @@ export function TradePanel({
   onDateChange,
 }: TradePanelProps) {
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
+    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
   };
   
   const totalPL = realizedPL + unrealizedPL;
@@ -99,6 +103,14 @@ export function TradePanel({
                 <div className="text-xs text-muted-foreground">確定損益</div>
                 <div className={`font-bold ${realizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(realizedPL)}</div>
             </div>
+             <div className="rounded-md bg-muted p-1">
+                <div className="text-xs text-muted-foreground">平均購入単価</div>
+                <div className="font-bold text-blue-400">{avgBuyPrice > 0 ? formatCurrency(avgBuyPrice) : '-'}</div>
+            </div>
+            <div className="rounded-md bg-muted p-1">
+                <div className="text-xs text-muted-foreground">平均売却単価</div>
+                <div className="font-bold text-red-400">{avgSellPrice > 0 ? formatCurrency(avgSellPrice) : '-'}</div>
+            </div>
         </div>
 
         <div className="rounded-lg text-center bg-card-foreground text-background">
@@ -113,7 +125,7 @@ export function TradePanel({
                     <TableHeader>
                         <TableRow>
                             <TableHead className="h-8 px-2">種別</TableHead>
-                            <TableHead className="h-8 px-2">単価</TableHead>
+                            <TableHead className="h-8 px-2">約定単価</TableHead>
                             <TableHead className="h-8 px-2">数量</TableHead>
                             <TableHead className="h-8 px-2"></TableHead>
                         </TableRow>

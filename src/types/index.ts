@@ -45,6 +45,8 @@ export type AppState = {
   currentReplayDate: string | null;
   positions: Position[];
   tradeHistory: Trade[];
+  avgBuyPrice: number;
+  avgSellPrice: number;
   maConfigs: Record<string, MAConfig>;
   showWeeklyChart: boolean;
   upColor: string;
