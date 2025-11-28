@@ -10,7 +10,7 @@ import { ControlPanel } from './control-panel';
 import { TradePanel } from './trade-panel';
 import { LineChart, Loader2, Menu } from 'lucide-react';
 import { MaSettingsPanel } from './ma-settings-panel';
-import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Sigma } from 'lucide-react';
 
@@ -212,7 +212,15 @@ export default function ChartTradeTrainer() {
               <Button variant="ghost" size="icon"><Menu /></Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-[320px]">
-              <Sheet open={isMaSettingsOpen} onOpenChange={setIsMaSettingsOpen}>
+                <SheetHeader>
+                    <SheetTitle className="sr-only">コントロールパネル</SheetTitle>
+                </SheetHeader>
+                <MaSettingsPanel
+                  maConfigs={state.maConfigs}
+                  onMaToggle={(period) => dispatch({ type: 'TOGGLE_MA', payload: period })}
+                  open={isMaSettingsOpen}
+                  onOpenChange={setIsMaSettingsOpen}
+                />
                 <ControlPanel
                   fileLoaded={state.fileLoaded}
                   isReplay={state.isReplay}
@@ -226,20 +234,8 @@ export default function ChartTradeTrainer() {
                   onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
                   onDateChange={(date) => dispatch({ type: 'SET_REPLAY_DATE', payload: date || null })}
                   onWeeklyChartToggle={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
-                >
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Sigma className="h-4 w-4" />
-                    </Button>
-                  </SheetTrigger>
-                </ControlPanel>
-                <MaSettingsPanel
-                  maConfigs={state.maConfigs}
-                  onMaToggle={(period) => dispatch({ type: 'TOGGLE_MA', payload: period })}
-                  open={isMaSettingsOpen}
-                  onOpenChange={setIsMaSettingsOpen}
+                  onMaSettingsToggle={() => setIsMaSettingsOpen(true)}
                 />
-              </Sheet>
             </SheetContent>
           </Sheet>
           <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>
@@ -275,7 +271,7 @@ export default function ChartTradeTrainer() {
           </div>
         </main>
 
-        <aside className="lg:border-l lg:border-border flex-none flex flex-col shrink-0 lg:w-[300px]">
+        <aside className="flex-none flex flex-col shrink-0 lg:w-[300px]">
           <TradePanel
             isReplay={state.isReplay}
             positions={state.positions}

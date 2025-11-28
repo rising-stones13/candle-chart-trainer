@@ -25,7 +25,7 @@ interface ControlPanelProps {
   onNextDay: () => void;
   onDateChange: (date?: Date) => void;
   onWeeklyChartToggle: () => void;
-  children: React.ReactNode;
+  onMaSettingsToggle: () => void;
 }
 
 export function ControlPanel({
@@ -41,7 +41,7 @@ export function ControlPanel({
   onNextDay,
   onDateChange,
   onWeeklyChartToggle,
-  children,
+  onMaSettingsToggle,
 }: ControlPanelProps) {
   return (
     <div className="flex flex-col h-full">
@@ -114,7 +114,9 @@ export function ControlPanel({
                     <Sigma className="h-4 w-4" />
                     移動平均線 設定
                 </Label>
-                {children}
+                <Button variant="outline" size="icon" onClick={onMaSettingsToggle}>
+                    <Sigma className="h-4 w-4" />
+                </Button>
             </div>
 
           </SidebarGroupContent>
