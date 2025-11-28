@@ -141,7 +141,7 @@ export function StockChart({
 
     // Update data
     candleSeriesRef.current.setData(chartData);
-    const volumeData = chartData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? '#F06292' : '#81D4FA' }));
+    const volumeData = chartData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? '#C2185B' : '#0288D1' }));
     volumeSeriesRef.current.setData(volumeData);
 
     Object.values(maConfigs).forEach(config => {
