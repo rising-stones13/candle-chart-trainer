@@ -63,5 +63,3 @@ export type AppState = {
   upColor: string;
   downColor: string;
 };
-
-    

@@ -19,7 +19,7 @@ type Action =
   | { type: 'START_REPLAY'; payload: Date }
   | { type: 'NEXT_DAY' }
   | { type: 'TRADE'; payload: 'long' | 'short' }
-  | { type: 'CLOSE_POSITION'; payload: 'long' | 'short' }
+  | { type: 'CLOSE_PARTIAL_POSITION'; payload: { type: 'long' | 'short', amount: number } }
   | { type: 'TOGGLE_MA'; payload: string }
   | { type: 'TOGGLE_WEEKLY_CHART' }
   | { type: 'SET_ERROR'; payload: string }
@@ -135,47 +135,83 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
         
         return { ...state, positions: newPositions };
     }
-    case 'CLOSE_POSITION': {
-      if (state.replayIndex === null) return state;
-      const positionType = action.payload;
-      const positionToClose = state.positions.find(p => p.type === positionType);
-      if (!positionToClose) return state;
+    case 'CLOSE_PARTIAL_POSITION': {
+        if (state.replayIndex === null) return state;
+        const { type: positionType, amount } = action.payload;
+        const positionToClose = state.positions.find(p => p.type === positionType);
+        if (!positionToClose || positionToClose.totalSize < amount) return state;
 
-      const currentPrice = state.chartData[state.replayIndex].close;
-      const exitDate = state.chartData[state.replayIndex].time;
-      
-      const profit = positionToClose.type === 'long'
-        ? (currentPrice - positionToClose.avgPrice) * positionToClose.totalSize
-        : (positionToClose.avgPrice - currentPrice) * positionToClose.totalSize;
+        const currentPrice = state.chartData[state.replayIndex].close;
+        const exitDate = state.chartData[state.replayIndex].time;
 
-      const newTrades: Trade[] = positionToClose.entries.map(entry => ({
-        id: entry.id,
-        type: positionToClose.type,
-        entryPrice: entry.price,
-        size: entry.size,
-        entryDate: entry.date,
-        exitPrice: currentPrice,
-        exitDate: exitDate,
-        profit: positionToClose.type === 'long'
-          ? (currentPrice - entry.price) * entry.size
-          : (entry.price - currentPrice) * entry.size
-      }));
+        let amountToClose = amount;
+        const newTrades: Trade[] = [];
+        const remainingEntries: PositionEntry[] = [];
+        let realizedProfit = 0;
 
-      const newRealizedPL = state.realizedPL + profit;
-      const newPositions = state.positions.filter(p => p.type !== positionType);
+        // FIFO
+        for (const entry of positionToClose.entries) {
+            if (amountToClose <= 0) {
+                remainingEntries.push(entry);
+                continue;
+            }
 
-      const newUnrealizedPL = newPositions.reduce((acc, pos) => {
-        const pl = pos.type === 'long' ? (currentPrice - pos.avgPrice) * pos.totalSize : (pos.avgPrice - currentPrice) * pos.totalSize;
-        return acc + pl;
-      }, 0);
+            const sizeToClose = Math.min(entry.size, amountToClose);
+            const profit = positionType === 'long'
+                ? (currentPrice - entry.price) * sizeToClose
+                : (entry.price - currentPrice) * sizeToClose;
+            
+            realizedProfit += profit;
 
-      return {
-        ...state,
-        positions: newPositions,
-        tradeHistory: [...state.tradeHistory, ...newTrades],
-        realizedPL: newRealizedPL,
-        unrealizedPL: newUnrealizedPL,
-      };
+            newTrades.push({
+                id: entry.id, // Or a new trade ID
+                type: positionType,
+                entryPrice: entry.price,
+                size: sizeToClose,
+                entryDate: entry.date,
+                exitPrice: currentPrice,
+                exitDate: exitDate,
+                profit: profit,
+            });
+
+            if (entry.size > sizeToClose) {
+                remainingEntries.push({ ...entry, size: entry.size - sizeToClose });
+            }
+            
+            amountToClose -= sizeToClose;
+        }
+
+        let newPositions = [...state.positions];
+        if (remainingEntries.length === 0) {
+            // Position is fully closed
+            newPositions = state.positions.filter(p => p.type !== positionType);
+        } else {
+            const newTotalSize = remainingEntries.reduce((sum, e) => sum + e.size, 0);
+            const newTotalCost = remainingEntries.reduce((sum, e) => sum + e.price * e.size, 0);
+            const newAvgPrice = newTotalCost / newTotalSize;
+            const updatedPosition: Position = {
+                ...positionToClose,
+                entries: remainingEntries,
+                totalSize: newTotalSize,
+                avgPrice: newAvgPrice,
+            };
+            newPositions = state.positions.map(p => p.type === positionType ? updatedPosition : p);
+        }
+        
+        const newRealizedPL = state.realizedPL + realizedProfit;
+        
+        const newUnrealizedPL = newPositions.reduce((acc, pos) => {
+            const pl = pos.type === 'long' ? (currentPrice - pos.avgPrice) * pos.totalSize : (pos.avgPrice - currentPrice) * pos.totalSize;
+            return acc + pl;
+        }, 0);
+
+        return {
+            ...state,
+            positions: newPositions,
+            tradeHistory: [...state.tradeHistory, ...newTrades],
+            realizedPL: newRealizedPL,
+            unrealizedPL: newUnrealizedPL,
+        };
     }
     case 'TOGGLE_MA':
       const period = action.payload;
@@ -255,6 +291,10 @@ export default function ChartTradeTrainer() {
 
   const handleSetCandleColor = (target: 'upColor' | 'downColor', color: string) => {
     dispatch({ type: 'SET_CANDLE_COLOR', payload: { target, color } });
+  };
+  
+  const handlePartialClose = (type: 'long' | 'short') => {
+    dispatch({ type: 'CLOSE_PARTIAL_POSITION', payload: { type, amount: 100 } });
   };
 
   const displayedChartData = useMemo(() => {
@@ -373,7 +413,7 @@ export default function ChartTradeTrainer() {
             avgBuyPrice={avgBuyPrice}
             avgSellPrice={avgSellPrice}
             onTrade={(type) => dispatch({ type: 'TRADE', payload: type })}
-            onClosePosition={(type) => dispatch({ type: 'CLOSE_POSITION', payload: type })}
+            onClosePosition={handlePartialClose}
             onStartReplay={handleStartReplay}
             onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
             onDateChange={(date) => dispatch({ type: 'SET_REPLAY_DATE', payload: date || null })}
@@ -383,5 +423,3 @@ export default function ChartTradeTrainer() {
     </div>
   );
 }
-
-    

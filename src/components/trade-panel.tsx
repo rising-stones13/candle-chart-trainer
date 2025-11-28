@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowDown, ArrowUp, X, CalendarIcon, Play, Forward } from 'lucide-react';
+import { ArrowDown, ArrowUp, CalendarIcon, Play, Forward } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -127,7 +127,7 @@ export function TradePanel({
                             <TableHead className="h-8 px-2">種別</TableHead>
                             <TableHead className="h-8 px-2">平均単価</TableHead>
                             <TableHead className="h-8 px-2">数量</TableHead>
-                            <TableHead className="h-8 px-2"></TableHead>
+                            <TableHead className="h-8 px-2 text-right">決済</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -138,15 +138,22 @@ export function TradePanel({
                         ) : (
                             positions.map(pos => (
                                 <TableRow key={pos.type}>
-                                    <TableCell className={`p-2 ${pos.type === 'long' ? 'text-blue-400' : 'text-red-400'}`}>
+                                    <TableCell className={`p-2 font-bold ${pos.type === 'long' ? 'text-blue-400' : 'text-red-400'}`}>
                                         {pos.type === 'long' ? '買い' : '売り'}
                                     </TableCell>
                                     <TableCell className="p-2">{formatCurrency(pos.avgPrice)}</TableCell>
                                     <TableCell className="p-2">{pos.totalSize}</TableCell>
-                                    <TableCell className="p-2">
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onClosePosition(pos.type)} disabled={!isReplay}>
-                                            <X className="h-4 w-4"/>
-                                        </Button>
+                                    <TableCell className="p-2 text-right">
+                                        {pos.type === 'long' && (
+                                            <Button variant="outline" size="sm" className="h-7 px-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white" onClick={() => onClosePosition('long')} disabled={!isReplay}>
+                                                売り決済
+                                            </Button>
+                                        )}
+                                        {pos.type === 'short' && (
+                                            <Button variant="outline" size="sm" className="h-7 px-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white" onClick={() => onClosePosition('short')} disabled={!isReplay}>
+                                                買い決済
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -159,5 +166,3 @@ export function TradePanel({
     </Card>
   );
 }
-
-    
