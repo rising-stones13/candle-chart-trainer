@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useMemo } from 'react';
-import { createChart, IChartApi, ISeriesApi, UTCTimestamp, Time, LineStyle, CrosshairMode, PriceScaleMode, LogicalRange } from 'lightweight-charts';
+import React, { useEffect, useRef } from 'react';
+import { createChart, IChartApi, ISeriesApi, CrosshairMode, LogicalRange } from 'lightweight-charts';
 import { calculateMA } from '@/lib/data-helpers';
-import type { CandleData, LineData, Position, Trade, MAConfig } from '@/types';
+import type { CandleData, Position, Trade, MAConfig } from '@/types';
 import { DraggableWindow } from './draggable-window';
 
 interface StockChartProps {
@@ -154,7 +154,7 @@ export function StockChart({
       const from = Math.max(0, dataLength - 30);
       const to = dataLength - 1;
       
-      chartRef.current.timeScale().setVisibleLogicalRange({ from, to });
+      chartRef.current.timeScale().setVisibleLogicalRange({ from, to } as LogicalRange);
     }
     
   }, [chartData, maConfigs]);

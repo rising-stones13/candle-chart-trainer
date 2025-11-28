@@ -228,7 +228,7 @@ export default function ChartTradeTrainer() {
           </ControlPanel>
         </aside>
 
-        <main className="flex flex-col h-screen bg-background">
+        <main className="hidden md:flex flex-col h-screen bg-background">
           <header className="p-4 border-b border-border">
             <h1 className="text-xl font-bold truncate">{state.chartTitle}</h1>
           </header>
@@ -248,7 +248,6 @@ export default function ChartTradeTrainer() {
                   maConfigs={state.maConfigs}
                   showWeeklyChart={state.showWeeklyChart}
                   onCloseWeeklyChart={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
-                  isReplay={state.isReplay}
                   replayIndex={state.replayIndex}
                 />
               ) : (
@@ -261,7 +260,7 @@ export default function ChartTradeTrainer() {
           </div>
         </main>
 
-        <aside className="border-l border-border flex-col h-screen lg:flex">
+        <aside className="border-l border-border flex-col h-screen hidden lg:flex">
           <TradePanel
               isReplay={state.isReplay}
               positions={state.positions}
