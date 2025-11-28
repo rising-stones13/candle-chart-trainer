@@ -30,7 +30,6 @@ export function ControlPanel({
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto">
         <SidebarGroup className={!fileLoaded ? 'opacity-50 pointer-events-none' : ''}>
-          <SidebarGroupLabel>表示設定</SidebarGroupLabel>
           <SidebarGroupContent className="space-y-4">
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
