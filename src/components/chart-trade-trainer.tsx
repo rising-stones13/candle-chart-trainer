@@ -9,7 +9,6 @@ import { StockChart } from './stock-chart';
 import { ControlPanel } from './control-panel';
 import { TradePanel } from './trade-panel';
 import { LineChart, Loader2, Menu, Download } from 'lucide-react';
-import { MaSettingsPanel } from './ma-settings-panel';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -233,7 +232,6 @@ export default function ChartTradeTrainer() {
   const { toast } = useToast();
   const [ticker, setTicker] = useState('7203');
   const [isLoading, setIsLoading] = useState(false);
-  const [isMaSettingsOpen, setIsMaSettingsOpen] = useState(false);
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
 
 
@@ -307,20 +305,15 @@ export default function ChartTradeTrainer() {
                     <SheetTitle>コントロールパネル</SheetTitle>
                 </SheetHeader>
                 <div className="p-4">
-                  <MaSettingsPanel
-                    maConfigs={state.maConfigs}
-                    onMaToggle={(period) => dispatch({ type: 'TOGGLE_MA', payload: period })}
-                    open={isMaSettingsOpen}
-                    onOpenChange={setIsMaSettingsOpen}
-                  />
                   <ControlPanel
                     fileLoaded={state.fileLoaded}
                     showWeeklyChart={state.showWeeklyChart}
                     onWeeklyChartToggle={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
-                    onMaSettingsToggle={() => setIsMaSettingsOpen(true)}
                     upColor={state.upColor}
                     downColor={state.downColor}
                     onCandleColorChange={handleSetCandleColor}
+                    maConfigs={state.maConfigs}
+                    onMaToggle={(period) => dispatch({ type: 'TOGGLE_MA', payload: period })}
                   />
                 </div>
             </SheetContent>

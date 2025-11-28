@@ -1,32 +1,34 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
 import { Settings2, Sigma, Palette } from 'lucide-react';
 import { SidebarHeader, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from './ui/sidebar';
+import type { MAConfig } from '@/types';
+import { Input } from './ui/input';
+import { Separator } from './ui/separator';
 
 interface ControlPanelProps {
   fileLoaded: boolean;
   showWeeklyChart: boolean;
   onWeeklyChartToggle: () => void;
-  onMaSettingsToggle: () => void;
   upColor: string;
   downColor: string;
   onCandleColorChange: (target: 'upColor' | 'downColor', color: string) => void;
+  maConfigs: Record<string, MAConfig>;
+  onMaToggle: (period: string) => void;
 }
 
 export function ControlPanel({
   fileLoaded,
   showWeeklyChart,
   onWeeklyChartToggle,
-  onMaSettingsToggle,
   upColor,
   downColor,
   onCandleColorChange,
+  maConfigs,
+  onMaToggle,
 }: ControlPanelProps) {
   return (
     <div className="flex flex-col h-full">
@@ -44,16 +46,8 @@ export function ControlPanel({
               </Label>
               <Switch id="weekly-chart-toggle" checked={showWeeklyChart} onCheckedChange={onWeeklyChartToggle} />
             </div>
-
-            <div className="flex items-center justify-between">
-                <Label htmlFor="ma-settings-button" className="flex items-center gap-2">
-                    <Sigma className="h-4 w-4" />
-                    移動平均線 設定
-                </Label>
-                <Button variant="outline" size="icon" onClick={onMaSettingsToggle}>
-                    <Sigma className="h-4 w-4" />
-                </Button>
-            </div>
+            
+            <Separator />
             
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
@@ -81,6 +75,29 @@ export function ControlPanel({
                         className="w-16 h-8 p-1"
                       />
                   </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <Sigma className="h-4 w-4" />
+                移動平均線 (MA)
+              </Label>
+              <div className="space-y-4 pt-2">
+                {Object.values(maConfigs).map(config => (
+                  <div key={config.period} className="flex items-center justify-between">
+                    <Label htmlFor={`ma-toggle-${config.period}`} className="text-base" style={{ color: config.color }}>
+                      {config.period}日 MA
+                    </Label>
+                    <Switch
+                      id={`ma-toggle-${config.period}`}
+                      checked={config.visible}
+                      onCheckedChange={() => onMaToggle(config.period.toString())}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 
