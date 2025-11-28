@@ -151,7 +151,7 @@ export function StockChart({
         const dataLength = chartData.length;
         if (dataLength > 0) {
             const logicalRange: LogicalRange = {
-                from: Math.max(0, dataLength - 30), // Show approx. 1 month of daily data
+                from: Math.max(0, dataLength - 30),
                 to: dataLength,
             };
             chartRef.current.timeScale().setVisibleLogicalRange(logicalRange);
