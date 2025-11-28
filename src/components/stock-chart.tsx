@@ -156,16 +156,19 @@ export function StockChart({
             series.applyOptions({ visible: config.visible });
         }
     });
-
-    const dataLength = chartData.length;
-    if (dataLength > 1) {
-        const from = dataLength > 120 ? dataLength - 120 : 0;
-        const to = dataLength + 5;
-        
-        chartRef.current.timeScale().setVisibleRange({ from, to });
+    
+    // データがセットされた後に、チャートの表示範囲を自動調整する
+    if (chartData.length > 1) {
+        chartRef.current.timeScale().fitContent();
     }
     
-  }, [chartData, maConfigs]);
+    // リプレイ中は最新の足にスクロールする
+    if (replayIndex !== null && chartData.length > 1) {
+      const dataLength = chartData.length;
+      chartRef.current.timeScale().scrollToPosition(dataLength - 1, false);
+    }
+    
+  }, [chartData, maConfigs, replayIndex]);
   
   useEffect(() => {
     if (!candleSeriesRef.current) return;
