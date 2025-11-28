@@ -49,7 +49,7 @@ export function TradePanel({ isReplay, positions, realizedPL, unrealizedPL, onTr
             </div>
         </div>
 
-        <div className="p-3 rounded-lg text-center bg-card-foreground text-background">
+        <div className="p-2 rounded-lg text-center bg-card-foreground text-background">
             <div className="text-sm">合計損益</div>
             <div className={`text-2xl font-bold ${totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{formatCurrency(totalPL)}</div>
         </div>
