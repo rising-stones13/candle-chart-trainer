@@ -39,11 +39,11 @@ export function TradePanel({ isReplay, positions, realizedPL, unrealizedPL, onTr
         </div>
         
         <div className="grid grid-cols-2 gap-4 text-center">
-            <div className="p-2 rounded-md bg-muted">
+            <div className="p-1 rounded-md bg-muted">
                 <div className="text-xs text-muted-foreground">評価損益</div>
                 <div className={`text-lg font-bold ${unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(unrealizedPL)}</div>
             </div>
-            <div className="p-2 rounded-md bg-muted">
+            <div className="p-1 rounded-md bg-muted">
                 <div className="text-xs text-muted-foreground">確定損益</div>
                 <div className={`text-lg font-bold ${realizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(realizedPL)}</div>
             </div>
