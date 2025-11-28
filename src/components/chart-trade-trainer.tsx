@@ -273,9 +273,10 @@ export default function ChartTradeTrainer() {
   };
 
   const displayedChartData = useMemo(() => {
-      return state.isReplay && state.replayIndex !== null
-        ? state.chartData.slice(0, state.replayIndex + 1)
-        : state.chartData;
+      if (state.isReplay && state.replayIndex !== null) {
+        return state.chartData.slice(0, state.replayIndex + 1);
+      }
+      return state.chartData;
   }, [state.isReplay, state.replayIndex, state.chartData]);
   
   const allEntries = useMemo(() => state.positions.flatMap(p => 
