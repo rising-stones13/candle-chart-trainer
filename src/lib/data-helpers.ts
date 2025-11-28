@@ -1,4 +1,5 @@
 import type { CandleData, LineData } from '@/types';
+import { Time } from 'lightweight-charts';
 
 export function parseCSV(csvText: string): CandleData[] {
   const lines = csvText.split('\n').filter(line => line.trim() !== '');
@@ -26,14 +27,14 @@ export function parseCSV(csvText: string): CandleData[] {
       return null;
     }
     return {
-      time: dateStr,
+      time: dateStr as Time,
       open: parseFloat(values[openIndex]),
       high: parseFloat(values[highIndex]),
       low: parseFloat(values[lowIndex]),
       close: parseFloat(values[closeIndex]),
       volume: parseInt(values[volumeIndex], 10),
     };
-  }).filter((d): d is CandleData => d !== null && !isNaN(d.open) && d.time)
+  }).filter((d): d is CandleData => d !== null && !isNaN(d.open) && !!d.time)
     .sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime());
 }
 
@@ -76,9 +77,12 @@ export function generateWeeklyData(dailyData: CandleData[]): CandleData[] {
 
 export function calculateMA(data: CandleData[], period: number): LineData[] {
   const result: LineData[] = [];
+  if (!data || data.length < period) {
+    return [];
+  }
   for (let i = 0; i < data.length; i++) {
     if (i < period - 1) {
-      result.push({ time: data[i].time, value: NaN }); // Use NaN for values that cannot be calculated
+      result.push({ time: data[i].time, value: NaN });
     } else {
       let sum = 0;
       for (let j = 0; j < period; j++) {

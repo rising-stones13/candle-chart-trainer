@@ -11,7 +11,7 @@ export type CandleData = {
 
 export type LineData = {
   time: Time;
-  value: number;
+  value: number | undefined | null | number;
 };
 
 export interface Position {
