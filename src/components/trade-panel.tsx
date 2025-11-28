@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowDown, ArrowUp, X, CalendarIcon, Play } from 'lucide-react';
+import { ArrowDown, ArrowUp, X, CalendarIcon, Play, Forward } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -15,6 +15,7 @@ interface TradePanelProps {
   fileLoaded: boolean;
   isReplay: boolean;
   replayDate: Date | null;
+  currentReplayDate: string | null;
   positions: Position[];
   realizedPL: number;
   unrealizedPL: number;
@@ -29,6 +30,7 @@ export function TradePanel({
   fileLoaded,
   isReplay,
   replayDate,
+  currentReplayDate,
   positions, 
   realizedPL, 
   unrealizedPL, 
@@ -45,12 +47,12 @@ export function TradePanel({
   const totalPL = realizedPL + unrealizedPL;
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col border-l">
       <CardHeader className="px-4 py-2">
         <CardTitle className="text-lg">模擬トレード</CardTitle>
       </CardHeader>
-      <CardContent className="px-4 pb-4 flex flex-col">
-        <div className={`space-y-3 mb-2 ${!fileLoaded ? 'opacity-50 pointer-events-none' : ''}`}>
+      <CardContent className="px-4 pb-4 flex flex-col flex-grow">
+        <div className={`space-y-2 mb-2 ${!fileLoaded ? 'opacity-50 pointer-events-none' : ''}`}>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
@@ -68,9 +70,15 @@ export function TradePanel({
               リプレイ開始
             </Button>
             <Button onClick={onNextDay} disabled={!isReplay} size="sm">
+              <Forward className="mr-2 h-4 w-4" />
               翌日へ進む
             </Button>
           </div>
+          {isReplay && currentReplayDate && (
+            <div className="text-center text-sm text-muted-foreground p-1 bg-muted rounded-md">
+              現在の日付: {currentReplayDate}
+            </div>
+          )}
         </div>
         <Separator className="my-2"/>
         <div className="grid grid-cols-2 gap-2 mb-1">
@@ -82,23 +90,23 @@ export function TradePanel({
           </Button>
         </div>
         
-        <div className="grid grid-cols-2 gap-2 mb-1">
-            <div className="rounded-md bg-muted">
+        <div className="grid grid-cols-2 gap-1 mb-1">
+            <div className="rounded-md bg-muted p-1">
                 <div className="text-xs text-muted-foreground">評価損益</div>
-                <div className={`text-lg font-bold ${unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(unrealizedPL)}</div>
+                <div className={`font-bold ${unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(unrealizedPL)}</div>
             </div>
-            <div className="rounded-md bg-muted">
+            <div className="rounded-md bg-muted p-1">
                 <div className="text-xs text-muted-foreground">確定損益</div>
-                <div className={`text-lg font-bold ${realizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(realizedPL)}</div>
+                <div className={`font-bold ${realizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(realizedPL)}</div>
             </div>
         </div>
 
-        <div className="rounded-lg text-center bg-card-foreground text-background mb-1">
-            <div className="text-sm">合計損益</div>
-            <div className={`text-2xl font-bold ${totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{formatCurrency(totalPL)}</div>
+        <div className="rounded-lg text-center bg-card-foreground text-background">
+            <div className="text-xs">合計損益</div>
+            <div className={`text-xl font-bold ${totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{formatCurrency(totalPL)}</div>
         </div>
 
-        <div className="flex-grow flex flex-col">
+        <div className="flex-grow flex flex-col min-h-0 mt-2">
             <h3 className="text-md font-semibold">保有ポジション</h3>
             <ScrollArea className="flex-grow">
                 <Table>

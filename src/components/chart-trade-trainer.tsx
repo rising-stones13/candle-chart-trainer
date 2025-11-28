@@ -12,7 +12,6 @@ import { LineChart, Loader2, Menu } from 'lucide-react';
 import { MaSettingsPanel } from './ma-settings-panel';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from './ui/button';
-import { Sigma } from 'lucide-react';
 
 type Action =
   | { type: 'SET_CHART_DATA'; payload: { data: CandleData[]; title: string } }
@@ -47,6 +46,7 @@ const initialState: AppStateWithLocal = {
   fileLoaded: false,
   replayIndex: null,
   isReplay: false,
+  currentReplayDate: null,
   replayDate: null,
   positions: [],
   tradeHistory: [],
@@ -74,7 +74,8 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
       const date = action.payload as Date;
       const startIndex = state.chartData.findIndex(d => new Date(d.time as string) >= date);
       if (startIndex === -1) return state; // Or show error
-      return { ...state, replayIndex: startIndex, isReplay: true, replayDate: date, positions: [], tradeHistory: [], realizedPL: 0, unrealizedPL: 0 };
+      const currentReplayDate = state.chartData[startIndex].time as string;
+      return { ...state, replayIndex: startIndex, isReplay: true, replayDate: date, currentReplayDate, positions: [], tradeHistory: [], realizedPL: 0, unrealizedPL: 0 };
     }
     case 'NEXT_DAY': {
       if (state.replayIndex === null || state.replayIndex >= state.chartData.length - 1) {
@@ -86,7 +87,8 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
         const pl = pos.type === 'long' ? (currentPrice - pos.entryPrice) * pos.size : (pos.entryPrice - currentPrice) * pos.size;
         return acc + pl;
       }, 0);
-      return { ...state, replayIndex: newIndex, unrealizedPL };
+      const currentReplayDate = state.chartData[newIndex].time as string;
+      return { ...state, replayIndex: newIndex, unrealizedPL, currentReplayDate };
     }
     case 'TRADE': {
         if (state.replayIndex === null) return state;
@@ -271,6 +273,7 @@ export default function ChartTradeTrainer() {
             fileLoaded={state.fileLoaded}
             isReplay={state.isReplay}
             replayDate={state.replayDate}
+            currentReplayDate={state.currentReplayDate}
             positions={state.positions}
             realizedPL={state.realizedPL}
             unrealizedPL={state.unrealizedPL}

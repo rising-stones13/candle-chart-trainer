@@ -42,6 +42,7 @@ export type AppState = {
   fileLoaded: boolean;
   replayIndex: number | null;
   isReplay: boolean;
+  currentReplayDate: string | null;
   positions: Position[];
   tradeHistory: Trade[];
   maConfigs: Record<string, MAConfig>;
