@@ -8,7 +8,7 @@ import type { AppState, CandleData, MAConfig, Position, Trade, PositionEntry } f
 import { StockChart } from './stock-chart';
 import { ControlPanel } from './control-panel';
 import { TradePanel } from './trade-panel';
-import { LineChart, Loader2, Menu, Download, AreaChart } from 'lucide-react';
+import { LineChart, Loader2, Menu, Download, AreaChart, ArrowLeft } from 'lucide-react';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -303,7 +303,7 @@ export default function ChartTradeTrainer() {
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-[320px] flex flex-col">
                 <SheetHeader className="p-2 border-b flex flex-row items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => setIsControlPanelOpen(false)}><Menu /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setIsControlPanelOpen(false)}><ArrowLeft /></Button>
                     <div className="border-l border-border h-6 mx-2"></div>
                     <SheetTitle>コントロールパネル</SheetTitle>
                 </SheetHeader>
