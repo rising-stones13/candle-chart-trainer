@@ -163,8 +163,6 @@ export function StockChart({
   useEffect(() => {
     if (!chartRef.current || !maData) return;
 
-    console.log('Updating MAs. maData:', maData);
-
     const lastVisibleTime = chartData.length > 0 ? new Date(chartData[chartData.length - 1].time as string).getTime() : null;
 
     Object.values(maConfigs).forEach(config => {
