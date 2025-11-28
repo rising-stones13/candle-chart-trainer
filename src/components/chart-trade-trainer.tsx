@@ -229,7 +229,7 @@ export default function ChartTradeTrainer() {
             >
               <Sheet open={isMaSettingsOpen} onOpenChange={setIsMaSettingsOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="w-full">
+                  <Button variant="outline" size="icon">
                     <Sigma className="h-4 w-4" />
                   </Button>
                 </SheetTrigger>
@@ -248,12 +248,12 @@ export default function ChartTradeTrainer() {
               <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>
           </header>
 
-          <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_300px] overflow-auto">
-            <main className="flex flex-col bg-background overflow-auto flex-grow">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-auto">
+            <main className="flex flex-col bg-background overflow-auto flex-1">
               <header className="p-4 border-b border-border hidden lg:block">
                 <h1 className="text-xl font-bold truncate">{state.chartTitle}</h1>
               </header>
-              <div className="flex-grow relative h-[60vh] lg:h-auto">
+              <div className="flex-grow relative">
                 {isLoading && !state.fileLoaded ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <Loader2 className="w-16 h-16 mb-4 animate-spin" />
@@ -281,7 +281,7 @@ export default function ChartTradeTrainer() {
               </div>
             </main>
 
-            <aside className="lg:border-l lg:border-border flex-col flex shrink-0">
+            <aside className="lg:border-l lg:border-border flex-col flex shrink-0 lg:w-[300px]">
               <TradePanel
                 isReplay={state.isReplay}
                 positions={state.positions}
