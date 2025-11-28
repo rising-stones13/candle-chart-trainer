@@ -22,8 +22,8 @@ const chartColors = {
   textColor: 'rgba(230, 230, 230, 0.9)',
   grid: '#2a2e39',
   border: '#3a3e4a',
-  upColor: '#26a69a',
-  downColor: '#ef5350',
+  upColor: '#ef5350', // Red for up candles (Yosen)
+  downColor: '#26a69a', // Cyan/Green for down candles (Insen)
 };
 
 const chartOptions = {
@@ -136,7 +136,7 @@ export function StockChart({
     if (!chartRef.current || !candleSeriesRef.current || !volumeSeriesRef.current) return;
 
     candleSeriesRef.current.setData(chartData);
-    const volumeData = chartData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)' }));
+    const volumeData = chartData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? chartColors.upColor : chartColors.downColor }));
     volumeSeriesRef.current.setData(volumeData);
 
     Object.values(maConfigs).forEach(config => {
@@ -169,13 +169,13 @@ export function StockChart({
         if (isTrade) {
             const trade = p as Trade;
             return [
-                { time: trade.entryDate, position: trade.type === 'long' ? 'belowBar' : 'aboveBar', color: trade.type === 'long' ? chartColors.upColor : chartColors.downColor, shape: 'arrowUp' as const, text: `E` },
+                { time: trade.entryDate, position: trade.type === 'long' ? 'belowBar' : 'aboveBar', color: chartColors.downColor, shape: 'arrowUp' as const, text: `E` },
                 { time: trade.exitDate, position: trade.type === 'long' ? 'aboveBar' : 'belowBar', color: trade.profit > 0 ? chartColors.upColor : chartColors.downColor, shape: 'arrowDown' as const, text: `X` },
             ];
         }
 
         const position = p as Position;
-        return { time: position.entryDate, position: position.type === 'long' ? 'belowBar' : 'aboveBar', color: position.type === 'long' ? chartColors.upColor : chartColors.downColor, shape: 'circle' as const, text: `${position.type.charAt(0).toUpperCase()}` };
+        return { time: position.entryDate, position: position.type === 'long' ? 'belowBar' : 'aboveBar', color: position.type === 'long' ? chartColors.downColor : chartColors.upColor, shape: 'circle' as const, text: `${position.type.charAt(0).toUpperCase()}` };
     }).flat();
 
     const sortedMarkers = markers.sort((a, b) => {
