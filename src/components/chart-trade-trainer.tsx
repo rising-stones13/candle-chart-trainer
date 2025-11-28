@@ -56,8 +56,8 @@ const initialState: AppStateWithLocal = {
   unrealizedPL: 0,
   maConfigs: initialMAConfigs,
   showWeeklyChart: false,
-  upColor: '#26a69a',
-  downColor: '#ef5350',
+  upColor: '#ef5350',
+  downColor: '#26a69a',
 };
 
 function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
