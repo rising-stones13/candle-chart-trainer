@@ -154,18 +154,16 @@ export function StockChart({
             series.applyOptions({ visible: config.visible });
         }
     });
-    
-    const dataLength = chartData.length;
-    if (dataLength > 1) {
-      if (replayIndex === null) {
-        const to = dataLength - 1;
-        const from = Math.max(0, to - 40);
-        chartRef.current.timeScale().setVisibleLogicalRange({ from, to } as LogicalRange);
-      } else {
-        const to = replayIndex;
-        const from = Math.max(0, to - 40);
-        chartRef.current.timeScale().setVisibleLogicalRange({ from, to } as LogicalRange);
-      }
+
+    // Don't auto-scroll when user is just advancing day-by-day
+    // Only set visible range on initial load or full replay reset.
+    if (replayIndex === null || (replayIndex !== null && chartData.length === replayIndex + 1)) {
+        const dataLength = chartData.length;
+        if (dataLength > 1) {
+            const to = dataLength - 1;
+            const from = Math.max(0, to - 40);
+            chartRef.current.timeScale().setVisibleLogicalRange({ from, to } as LogicalRange);
+        }
     }
     
   }, [chartData, maConfigs, upColor, downColor, replayIndex]);
