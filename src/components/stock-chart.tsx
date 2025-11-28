@@ -23,7 +23,7 @@ const chartColors = {
   grid: '#2a2e39',
   border: '#3a3e4a',
   upColor: '#ef5350', // Red for up candles (Yosen)
-  downColor: '#4FC3F7', // Cyan/Green for down candles (Insen)
+  downColor: '#2196F3', // Darker Blue for down candles (Insen)
 };
 
 const chartOptions = {
