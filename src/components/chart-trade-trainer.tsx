@@ -401,5 +401,3 @@ export default function ChartTradeTrainer() {
     </div>
   );
 }
-
-    

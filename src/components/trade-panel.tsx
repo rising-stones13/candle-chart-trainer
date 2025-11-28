@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { Separator } from './ui/separator';
+import React from 'react';
 
 interface TradePanelProps {
   fileLoaded: boolean;
@@ -38,11 +39,18 @@ export function TradePanel({
   onNextDay,
   onDateChange,
 }: TradePanelProps) {
+  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
   };
   
   const totalPL = realizedPL + unrealizedPL;
+
+  const handleDateSelect = (date?: Date) => {
+    onDateChange(date);
+    setIsCalendarOpen(false);
+  };
 
   return (
     <Card className="h-full flex flex-col border-l">
@@ -51,7 +59,7 @@ export function TradePanel({
       </CardHeader>
       <CardContent className="px-4 pb-4 flex flex-col flex-grow">
         <div className={`space-y-2 mb-2 ${!fileLoaded ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Popover>
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -59,7 +67,7 @@ export function TradePanel({
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={replayDate || undefined} onSelect={onDateChange} initialFocus />
+              <Calendar mode="single" selected={replayDate || undefined} onSelect={handleDateSelect} initialFocus />
             </PopoverContent>
           </Popover>
           <div className="grid grid-cols-1 gap-2">
@@ -148,5 +156,3 @@ export function TradePanel({
     </Card>
   );
 }
-
-    
