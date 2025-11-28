@@ -53,13 +53,16 @@ function reducer(state: typeof initialState, action: Action): typeof initialStat
     case 'SET_CHART_DATA': {
       const { data, title } = action.payload;
       const maData = Object.fromEntries(
-        Object.values(initialMAConfigs).map(config => [
+        Object.values(state.maConfigs).map(config => [
           config.period,
           calculateMA(data, config.period),
         ])
       );
       return {
-        ...initialState,
+        ...initialState, // Reset most state
+        maConfigs: state.maConfigs, // But preserve maConfigs
+        isLogScale: state.isLogScale, // and other UI settings
+        showWeeklyChart: state.showWeeklyChart,
         chartData: data,
         weeklyData: generateWeeklyData(data),
         maData: maData,
@@ -136,12 +139,21 @@ function reducer(state: typeof initialState, action: Action): typeof initialStat
     }
     case 'TOGGLE_MA':
       const period = action.payload;
+      const newMaConfigs = {
+        ...state.maConfigs,
+        [period]: { ...state.maConfigs[period], visible: !state.maConfigs[period].visible },
+      };
+
+      // Also recalculate MA data if it's not already there for some reason
+      const maData = { ...state.maData };
+      if (!maData[period] && state.chartData.length > 0) {
+        maData[period] = calculateMA(state.chartData, parseInt(period));
+      }
+
       return {
         ...state,
-        maConfigs: {
-          ...state.maConfigs,
-          [period]: { ...state.maConfigs[period], visible: !state.maConfigs[period].visible },
-        },
+        maConfigs: newMaConfigs,
+        maData: maData,
       };
     case 'TOGGLE_WEEKLY_CHART':
       return { ...state, showWeeklyChart: !state.showWeeklyChart };
