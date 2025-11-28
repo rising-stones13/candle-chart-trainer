@@ -72,15 +72,8 @@ export function parseStockData(jsonText: string): { data: CandleData[], meta: Ya
       continue;
     }
     
-    // Convert UNIX timestamp (seconds) to YYYY-MM-DD string
-    const date = new Date(timestamps[i] * 1000);
-    const year = date.getUTCFullYear();
-    const month = ('0' + (date.getUTCMonth() + 1)).slice(-2);
-    const day = ('0' + date.getUTCDate()).slice(-2);
-    const timeStr = `${year}-${month}-${day}`;
-
     candleData.push({
-      time: timeStr as Time,
+      time: timestamps[i] as Time,
       open: quote.open[i]!,
       high: quote.high[i]!,
       low: quote.low[i]!,
@@ -91,47 +84,44 @@ export function parseStockData(jsonText: string): { data: CandleData[], meta: Ya
 
   // Sort just in case and remove duplicates
   const uniqueData = Array.from(new Map(candleData.map(item => [item.time, item])).values())
-    .sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime());
+    .sort((a, b) => (a.time as number) - (b.time as number));
 
   return { data: uniqueData, meta: result.meta };
 }
 
 
 export function generateWeeklyData(dailyData: CandleData[]): CandleData[] {
-  if (dailyData.length === 0) return [];
+    if (dailyData.length === 0) return [];
 
-  const weeklyDataMap = new Map<string, CandleData>();
+    const weeklyDataMap = new Map<string, CandleData>();
 
-  for (const day of dailyData) {
-    const date = new Date(day.time as string);
-    // Adjust for timezone offset to prevent day-of-week errors
-    const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
-    const dayOfWeek = adjustedDate.getUTCDay();
-    const weekStartDate = new Date(adjustedDate);
-    weekStartDate.setUTCDate(adjustedDate.getUTCDate() - dayOfWeek);
-    const weekStartString = weekStartDate.toISOString().split('T')[0];
+    for (const day of dailyData) {
+        const date = new Date(typeof day.time === 'number' ? day.time * 1000 : day.time as string);
+        const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
+        const dayOfWeek = adjustedDate.getUTCDay();
+        const weekStartDate = new Date(adjustedDate);
+        weekStartDate.setUTCDate(adjustedDate.getUTCDate() - dayOfWeek);
+        const weekStartString = weekStartDate.toISOString().split('T')[0];
 
-    if (!weeklyDataMap.has(weekStartString)) {
-      weeklyDataMap.set(weekStartString, {
-        time: day.time,
-        open: day.open,
-        high: day.high,
-        low: day.low,
-        close: day.close,
-        volume: day.volume || 0,
-      });
-    } else {
-      const week = weeklyDataMap.get(weekStartString)!;
-      week.high = Math.max(week.high, day.high);
-      week.low = Math.min(week.low, day.low);
-      week.close = day.close;
-      week.volume = (week.volume || 0) + (day.volume || 0);
-      // Also update time to be the last day of the week so far
-      week.time = day.time;
+        if (!weeklyDataMap.has(weekStartString)) {
+            weeklyDataMap.set(weekStartString, {
+                time: weekStartString as Time, // Use week start date for weekly chart
+                open: day.open,
+                high: day.high,
+                low: day.low,
+                close: day.close,
+                volume: day.volume || 0,
+            });
+        } else {
+            const week = weeklyDataMap.get(weekStartString)!;
+            week.high = Math.max(week.high, day.high);
+            week.low = Math.min(week.low, day.low);
+            week.close = day.close;
+            week.volume = (week.volume || 0) + (day.volume || 0);
+        }
     }
-  }
 
-  return Array.from(weeklyDataMap.values()).sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime());
+    return Array.from(weeklyDataMap.values()).sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime());
 }
 
 export function calculateMA(data: CandleData[], period: number): LineData[] {
