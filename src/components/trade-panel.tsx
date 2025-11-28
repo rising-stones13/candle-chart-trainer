@@ -85,7 +85,7 @@ export function TradePanel({
           </div>
           {isReplay && currentReplayDate && (
             <div className="text-center text-sm text-muted-foreground p-1 bg-muted rounded-md">
-              現在の日付: {currentReplayDate}
+              現在の日付: {format(new Date(currentReplayDate), 'PPP', { locale: ja })}
             </div>
           )}
         </div>
