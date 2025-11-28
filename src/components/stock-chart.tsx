@@ -3,13 +3,14 @@
 import React, { useEffect, useRef } from 'react';
 import { createChart, IChartApi, ISeriesApi, CrosshairMode, LogicalRange, ChartOptions } from 'lightweight-charts';
 import { calculateMA } from '@/lib/data-helpers';
-import type { CandleData, Position, Trade, MAConfig } from '@/types';
+import type { CandleData, Trade, MAConfig } from '@/types';
 import { DraggableWindow } from './draggable-window';
+import { PositionEntry } from '@/types';
 
 interface StockChartProps {
   chartData: CandleData[];
   weeklyData: CandleData[];
-  positions: Position[];
+  positions: ({ id: string; type: 'long' | 'short'; entryPrice: number; size: number; entryDate: string | number | Date | undefined; })[];
   tradeHistory: Trade[];
   replayIndex: number | null;
   maConfigs: Record<string, MAConfig>;
@@ -162,7 +163,7 @@ export function StockChart({
         chartRef.current.timeScale().setVisibleLogicalRange({ from, to } as LogicalRange);
       } else {
         const to = replayIndex;
-        const from = Math.max(0, to - 100);
+        const from = Math.max(0, to - 40);
         chartRef.current.timeScale().setVisibleLogicalRange({ from, to } as LogicalRange);
       }
     }
@@ -172,7 +173,7 @@ export function StockChart({
   useEffect(() => {
     if (!candleSeriesRef.current) return;
     
-    const allMarkers = [...positions, ...tradeHistory];
+    const allMarkers = [...positions.map(p => ({...p, entryDate: p.entryDate as string})), ...tradeHistory];
     const markers = allMarkers.map(p => {
         const isTrade = 'exitPrice' in p;
 
@@ -184,7 +185,7 @@ export function StockChart({
             ];
         }
 
-        const position = p as Position;
+        const position = p as PositionEntry & {type: 'long' | 'short'};
         return { time: position.entryDate, position: position.type === 'long' ? 'belowBar' : 'aboveBar', color: position.type === 'long' ? downColor : upColor, shape: 'circle' as const, text: `${position.type.charAt(0).toUpperCase()}` };
     }).flat();
 
