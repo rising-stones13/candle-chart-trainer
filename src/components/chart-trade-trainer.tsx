@@ -45,7 +45,6 @@ const initialState: AppStateWithLocal = {
   fileLoaded: false,
   replayIndex: null,
   isReplay: false,
-  currentReplayDate: null,
   positions: [],
   tradeHistory: [],
   realizedPL: 0,
@@ -76,8 +75,7 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
       const date = action.payload as Date;
       const startIndex = state.chartData.findIndex(d => new Date(d.time as string) >= date);
       if (startIndex === -1) return state; // Or show error
-      const currentReplayDate = state.chartData[startIndex].time as string;
-      return { ...state, replayIndex: startIndex, isReplay: true, currentReplayDate, positions: [], tradeHistory: [], realizedPL: 0, unrealizedPL: 0 };
+      return { ...state, replayIndex: startIndex, isReplay: true, positions: [], tradeHistory: [], realizedPL: 0, unrealizedPL: 0 };
     }
     case 'NEXT_DAY': {
       if (state.replayIndex === null || state.replayIndex >= state.chartData.length - 1) {
@@ -89,8 +87,7 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
         const pl = pos.type === 'long' ? (currentPrice - pos.avgPrice) * pos.totalSize : (pos.avgPrice - currentPrice) * pos.totalSize;
         return acc + pl;
       }, 0);
-      const currentReplayDate = state.chartData[newIndex].time as string;
-      return { ...state, replayIndex: newIndex, unrealizedPL, currentReplayDate };
+      return { ...state, replayIndex: newIndex, unrealizedPL };
     }
     case 'TRADE': {
         if (state.replayIndex === null) return state;
@@ -387,7 +384,6 @@ export default function ChartTradeTrainer() {
             fileLoaded={state.fileLoaded}
             isReplay={state.isReplay}
             replayDate={state.isReplay && state.replayIndex !== null ? new Date(state.chartData[state.replayIndex].time as string) : null}
-            currentReplayDate={state.currentReplayDate}
             positions={state.positions}
             realizedPL={state.realizedPL}
             unrealizedPL={state.unrealizedPL}

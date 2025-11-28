@@ -17,7 +17,6 @@ interface TradePanelProps {
   fileLoaded: boolean;
   isReplay: boolean;
   replayDate: Date | null;
-  currentReplayDate: string | null;
   positions: Position[];
   realizedPL: number;
   unrealizedPL: number;
@@ -31,7 +30,6 @@ export function TradePanel({
   fileLoaded,
   isReplay,
   replayDate,
-  currentReplayDate,
   positions, 
   realizedPL, 
   unrealizedPL, 
@@ -64,7 +62,7 @@ export function TradePanel({
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {replayDate ? format(replayDate, 'PPP', { locale: ja }) : <span>開始日を選択</span>}
+                {replayDate ? format(replayDate, 'yyyy年M月d日', { locale: ja }) : <span>開始日を選択</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
@@ -83,11 +81,6 @@ export function TradePanel({
               翌日へ進む
             </Button>
           </div>
-          {isReplay && currentReplayDate && (
-            <div className="text-center text-sm text-muted-foreground p-1 bg-muted rounded-md">
-              現在の日付: {format(new Date(currentReplayDate), 'PPP', { locale: ja })}
-            </div>
-          )}
         </div>
         <Separator className="my-2"/>
         <div className="grid grid-cols-2 gap-2 mb-1">
