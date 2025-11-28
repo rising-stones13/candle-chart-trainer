@@ -157,18 +157,15 @@ export function StockChart({
         }
     });
     
-    // データがセットされた後に、チャートの表示範囲を自動調整する
     if (chartData.length > 1) {
-        chartRef.current.timeScale().fitContent();
-    }
-    
-    // リプレイ中は最新の足にスクロールする
-    if (replayIndex !== null && chartData.length > 1) {
       const dataLength = chartData.length;
-      chartRef.current.timeScale().scrollToPosition(dataLength - 1, false);
+      const from = Math.max(0, dataLength - 30);
+      const to = dataLength - 1;
+      
+      chartRef.current.timeScale().setVisibleLogicalRange({ from, to });
     }
     
-  }, [chartData, maConfigs, replayIndex]);
+  }, [chartData, maConfigs]);
   
   useEffect(() => {
     if (!candleSeriesRef.current) return;
