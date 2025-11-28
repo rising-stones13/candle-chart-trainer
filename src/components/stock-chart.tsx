@@ -4,11 +4,11 @@ import React, { useEffect, useRef } from 'react';
 import { createChart, IChartApi, ISeriesApi, UTCTimestamp, Time, LineStyle, CrosshairMode, PriceScaleMode, LogicalRange } from 'lightweight-charts';
 import type { CandleData, LineData, Position, Trade, MAConfig } from '@/types';
 import { DraggableWindow } from './draggable-window';
+import { calculateMA } from '@/lib/data-helpers';
 
 interface StockChartProps {
   dailyData: CandleData[];
   weeklyData: CandleData[];
-  maData: { [key: string]: LineData[] };
   positions: Position[];
   tradeHistory: Trade[];
   replayIndex: number | null;
@@ -90,7 +90,6 @@ function Chart({ data, title, isWeekly = false }: { data: CandleData[], title: s
 export function StockChart({
   dailyData,
   weeklyData,
-  maData,
   positions,
   tradeHistory,
   replayIndex,
@@ -124,6 +123,21 @@ export function StockChart({
     chart.priceScale('volume_scale').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     volumeSeriesRef.current = volumeSeries;
 
+    // Initialize MA Series
+    Object.values(maConfigs).forEach(config => {
+      const period = config.period.toString();
+      if (!maSeriesRefs.current[period]) {
+        const series = chart.addLineSeries({
+          color: config.color,
+          lineWidth: 2,
+          lastValueVisible: false,
+          priceLineVisible: false,
+          visible: config.visible,
+        });
+        maSeriesRefs.current[period] = series;
+      }
+    });
+
     const handleResize = () => chart.applyOptions({ width: chartContainerRef.current!.clientWidth, height: chartContainerRef.current!.clientHeight });
     window.addEventListener('resize', handleResize);
 
@@ -131,6 +145,7 @@ export function StockChart({
       window.removeEventListener('resize', handleResize);
       chart.remove();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   useEffect(() => {
@@ -142,53 +157,35 @@ export function StockChart({
   useEffect(() => {
     if (candleSeriesRef.current && volumeSeriesRef.current && chartRef.current) {
       candleSeriesRef.current.setData(chartData);
+      
       const volumeData = chartData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)' }));
       volumeSeriesRef.current.setData(volumeData);
       
+      // Calculate and set MA data based on the current chartData
+      Object.values(maConfigs).forEach(config => {
+        const period = config.period.toString();
+        const series = maSeriesRefs.current[period];
+        if (series) {
+          const maData = calculateMA(chartData, config.period);
+          series.setData(maData);
+          series.applyOptions({ visible: config.visible });
+        }
+      });
+
       if (replayIndex === null) {
         const dataLength = chartData.length;
         if (dataLength > 0) {
             const logicalRange: LogicalRange = {
-                from: Math.max(0, dataLength - 30),
+                from: Math.max(0, dataLength - 120),
                 to: dataLength,
             };
             chartRef.current.timeScale().setVisibleLogicalRange(logicalRange);
         }
       } else {
-         chartRef.current.timeScale().scrollToPosition(10, false);
+         chartRef.current.timeScale().scrollToPosition(chartData.length, false);
       }
     }
-  }, [chartData, replayIndex]);
-  
-  useEffect(() => {
-    if (!chartRef.current || !maData) return;
-
-    const lastVisibleTime = chartData.length > 0 ? new Date(chartData[chartData.length - 1].time as string).getTime() : null;
-
-    Object.values(maConfigs).forEach(config => {
-        const period = config.period.toString();
-        let series = maSeriesRefs.current[period];
-
-        if (!series) {
-            series = chartRef.current!.addLineSeries({
-                color: config.color,
-                lineWidth: 2,
-                lastValueVisible: false,
-                priceLineVisible: false,
-            });
-            maSeriesRefs.current[period] = series;
-        }
-
-        let dataForMa = maData[period] || [];
-
-        if (replayIndex !== null && lastVisibleTime !== null) {
-            dataForMa = dataForMa.slice(0, replayIndex + 1);
-        }
-        
-        series.setData(dataForMa);
-        series.applyOptions({ visible: config.visible });
-    });
-}, [maData, maConfigs, chartData, replayIndex]);
+  }, [chartData, maConfigs, replayIndex]);
   
   useEffect(() => {
     if (!candleSeriesRef.current) return;

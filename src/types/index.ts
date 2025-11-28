@@ -38,7 +38,6 @@ export type MAConfig = {
 export type AppState = {
   chartData: CandleData[];
   weeklyData: CandleData[];
-  maData: { [key: string]: LineData[] };
   chartTitle: string;
   fileLoaded: boolean;
   replayIndex: number | null;

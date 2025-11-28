@@ -33,7 +33,6 @@ const initialMAConfigs: Record<string, MAConfig> = {
 const initialState: AppState & { replayDate: Date | null, unrealizedPL: number, realizedPL: number, isLogScale: boolean } = {
   chartData: [],
   weeklyData: [],
-  maData: {},
   chartTitle: 'ChartTrade Trainer',
   fileLoaded: false,
   replayIndex: null,
@@ -52,20 +51,13 @@ function reducer(state: typeof initialState, action: Action): typeof initialStat
   switch (action.type) {
     case 'SET_CHART_DATA': {
       const { data, title } = action.payload;
-      const maData = Object.fromEntries(
-        Object.values(state.maConfigs).map(config => [
-          config.period.toString(), // Convert period to string key
-          calculateMA(data, config.period),
-        ])
-      );
       return {
         ...state,
         chartData: data,
         weeklyData: generateWeeklyData(data),
-        maData: maData,
         chartTitle: title,
         fileLoaded: true,
-        replayIndex: null, // Reset replay state
+        replayIndex: null,
         isReplay: false,
         replayDate: null,
         positions: [],
@@ -148,16 +140,9 @@ function reducer(state: typeof initialState, action: Action): typeof initialStat
         [period]: { ...state.maConfigs[period], visible: !state.maConfigs[period].visible },
       };
 
-      // Also recalculate MA data if it's not already there for some reason
-      const maData = { ...state.maData };
-      if (!maData[period] && state.chartData.length > 0) {
-        maData[period] = calculateMA(state.chartData, parseInt(period));
-      }
-
       return {
         ...state,
         maConfigs: newMaConfigs,
-        maData: maData,
       };
     case 'TOGGLE_WEEKLY_CHART':
       return { ...state, showWeeklyChart: !state.showWeeklyChart };
@@ -214,7 +199,6 @@ export default function ChartTradeTrainer() {
     <StockChart
       dailyData={state.chartData}
       weeklyData={state.weeklyData}
-      maData={state.maData}
       positions={state.positions}
       tradeHistory={state.tradeHistory}
       replayIndex={state.replayIndex}
@@ -223,7 +207,7 @@ export default function ChartTradeTrainer() {
       onCloseWeeklyChart={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
       isLogScale={state.isLogScale}
     />
-  ), [state.chartData, state.weeklyData, state.maData, state.positions, state.tradeHistory, state.replayIndex, state.maConfigs, state.showWeeklyChart, state.isLogScale]);
+  ), [state.chartData, state.weeklyData, state.positions, state.tradeHistory, state.replayIndex, state.maConfigs, state.showWeeklyChart, state.isLogScale]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] lg:grid-cols-[320px_1fr_300px] h-screen max-h-screen overflow-hidden font-body">
