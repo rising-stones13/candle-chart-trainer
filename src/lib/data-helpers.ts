@@ -75,17 +75,20 @@ export function generateWeeklyData(dailyData: CandleData[]): CandleData[] {
 }
 
 export function calculateMA(data: CandleData[], period: number): LineData[] {
-  if (data.length < period) return [];
-  const maData: LineData[] = [];
-  for (let i = period - 1; i < data.length; i++) {
-    let sum = 0;
-    for (let j = 0; j < period; j++) {
-      sum += data[i - j].close;
+  const result: LineData[] = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) {
+      result.push({ time: data[i].time, value: NaN }); // Use NaN for values that cannot be calculated
+    } else {
+      let sum = 0;
+      for (let j = 0; j < period; j++) {
+        sum += data[i - j].close;
+      }
+      result.push({
+        time: data[i].time,
+        value: parseFloat((sum / period).toFixed(2)),
+      });
     }
-    maData.push({
-      time: data[i].time, // Ensure the time is exactly the same as the candlestick data point
-      value: parseFloat((sum / period).toFixed(2)),
-    });
   }
-  return maData;
+  return result;
 }

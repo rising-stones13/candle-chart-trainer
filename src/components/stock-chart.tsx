@@ -181,14 +181,14 @@ export function StockChart({
 
         let dataForMa = maData[period] || [];
 
-        if (lastVisibleTime !== null) {
-            dataForMa = dataForMa.filter(d => new Date(d.time as string).getTime() <= lastVisibleTime);
+        if (replayIndex !== null && lastVisibleTime !== null) {
+            dataForMa = dataForMa.slice(0, replayIndex + 1);
         }
         
         series.setData(dataForMa);
         series.applyOptions({ visible: config.visible });
     });
-  }, [maData, maConfigs, chartData, replayIndex]);
+}, [maData, maConfigs, chartData, replayIndex]);
   
   useEffect(() => {
     if (!candleSeriesRef.current) return;
