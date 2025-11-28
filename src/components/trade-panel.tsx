@@ -5,18 +5,39 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowDown, ArrowUp, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, X, CalendarIcon, Play } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { Separator } from './ui/separator';
 
 interface TradePanelProps {
+  fileLoaded: boolean;
   isReplay: boolean;
+  replayDate: Date | null;
   positions: Position[];
   realizedPL: number;
   unrealizedPL: number;
   onTrade: (type: 'long' | 'short') => void;
   onClosePosition: (positionId: string) => void;
+  onStartReplay: () => void;
+  onNextDay: () => void;
+  onDateChange: (date?: Date) => void;
 }
 
-export function TradePanel({ isReplay, positions, realizedPL, unrealizedPL, onTrade, onClosePosition }: TradePanelProps) {
+export function TradePanel({ 
+  fileLoaded,
+  isReplay,
+  replayDate,
+  positions, 
+  realizedPL, 
+  unrealizedPL, 
+  onTrade, 
+  onClosePosition,
+  onStartReplay,
+  onNextDay,
+  onDateChange,
+}: TradePanelProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
   };
@@ -29,11 +50,34 @@ export function TradePanel({ isReplay, positions, realizedPL, unrealizedPL, onTr
         <CardTitle className="text-lg">模擬トレード</CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4 flex flex-col">
+        <div className={`space-y-3 mb-2 ${!fileLoaded ? 'opacity-50 pointer-events-none' : ''}`}>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {replayDate ? format(replayDate, 'PPP') : <span>開始日を選択</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar mode="single" selected={replayDate || undefined} onSelect={onDateChange} initialFocus />
+            </PopoverContent>
+          </Popover>
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={onStartReplay} disabled={!replayDate || isReplay} size="sm">
+              <Play className="mr-2 h-4 w-4" />
+              リプレイ開始
+            </Button>
+            <Button onClick={onNextDay} disabled={!isReplay} size="sm">
+              翌日へ進む
+            </Button>
+          </div>
+        </div>
+        <Separator className="my-2"/>
         <div className="grid grid-cols-2 gap-2 mb-1">
-          <Button onClick={() => onTrade('long')} disabled={!isReplay} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-2" size="sm">
+          <Button onClick={() => onTrade('long')} disabled={!isReplay} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-2">
             <ArrowUp className="mr-1 h-4 w-4" /> 買い
           </Button>
-          <Button onClick={() => onTrade('short')} disabled={!isReplay} className="bg-red-600 hover:bg-red-700 text-white h-8 px-2" size="sm">
+          <Button onClick={() => onTrade('short')} disabled={!isReplay} className="bg-red-600 hover:bg-red-700 text-white h-8 px-2">
             <ArrowDown className="mr-1 h-4 w-4" /> 空売り
           </Button>
         </div>
@@ -49,12 +93,12 @@ export function TradePanel({ isReplay, positions, realizedPL, unrealizedPL, onTr
             </div>
         </div>
 
-        <div className="rounded-lg text-center bg-card-foreground text-background">
+        <div className="rounded-lg text-center bg-card-foreground text-background mb-1">
             <div className="text-sm">合計損益</div>
             <div className={`text-2xl font-bold ${totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{formatCurrency(totalPL)}</div>
         </div>
 
-        <div className="flex-grow flex flex-col mt-2">
+        <div className="flex-grow flex flex-col">
             <h3 className="text-md font-semibold">保有ポジション</h3>
             <ScrollArea className="flex-grow">
                 <Table>

@@ -5,52 +5,39 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, Download, Play, Settings2, Loader2, Sigma } from 'lucide-react';
-import { format } from 'date-fns';
+import { Download, Settings2, Loader2, Sigma } from 'lucide-react';
 import { SidebarHeader, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from './ui/sidebar';
 
 interface ControlPanelProps {
   fileLoaded: boolean;
-  isReplay: boolean;
-  replayDate: Date | null;
   showWeeklyChart: boolean;
   ticker: string;
   onTickerChange: (ticker: string) => void;
   onFetchData: () => void;
   isLoading: boolean;
-  onStartReplay: () => void;
-  onNextDay: () => void;
-  onDateChange: (date?: Date) => void;
   onWeeklyChartToggle: () => void;
   onMaSettingsToggle: () => void;
 }
 
 export function ControlPanel({
   fileLoaded,
-  isReplay,
-  replayDate,
   showWeeklyChart,
   ticker,
   onTickerChange,
   onFetchData,
   isLoading,
-  onStartReplay,
-  onNextDay,
-  onDateChange,
   onWeeklyChartToggle,
   onMaSettingsToggle,
 }: ControlPanelProps) {
   return (
     <div className="flex flex-col h-full">
       <SidebarHeader>
-        <h2 className="text-lg font-semibold">コントロールパネル</h2>
+        <h2 className="text-lg font-semibold sr-only">コントロールパネル</h2>
       </SidebarHeader>
       <div className="flex-grow overflow-y-auto">
         <SidebarGroup>
-          <SidebarGroupLabel>1. データ読み込み</SidebarGroupLabel>
+          <SidebarGroupLabel>データ読み込み</SidebarGroupLabel>
           <SidebarGroupContent>
             <div className="flex w-full items-center space-x-2">
               <Input
@@ -73,33 +60,7 @@ export function ControlPanel({
         <Separator />
 
         <SidebarGroup className={!fileLoaded ? 'opacity-50 pointer-events-none' : ''}>
-          <SidebarGroupLabel>2. リプレイ機能</SidebarGroupLabel>
-          <SidebarGroupContent className="space-y-3">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {replayDate ? format(replayDate, 'PPP') : <span>開始日を選択</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={replayDate || undefined} onSelect={onDateChange} initialFocus />
-              </PopoverContent>
-            </Popover>
-            <Button onClick={onStartReplay} disabled={!replayDate || isReplay} className="w-full">
-              <Play className="mr-2 h-4 w-4" />
-              リプレイ開始
-            </Button>
-            <Button onClick={onNextDay} disabled={!isReplay} className="w-full">
-              翌日へ進む
-            </Button>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <Separator />
-
-        <SidebarGroup className={!fileLoaded ? 'opacity-50 pointer-events-none' : ''}>
-          <SidebarGroupLabel>3. 表示設定</SidebarGroupLabel>
+          <SidebarGroupLabel>表示設定</SidebarGroupLabel>
           <SidebarGroupContent className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="weekly-chart-toggle" className="flex items-center gap-2">

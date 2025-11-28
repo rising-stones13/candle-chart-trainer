@@ -213,7 +213,7 @@ export default function ChartTradeTrainer() {
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-[320px]">
                 <SheetHeader>
-                    <SheetTitle className="sr-only">コントロールパネル</SheetTitle>
+                    <SheetTitle>コントロールパネル</SheetTitle>
                 </SheetHeader>
                 <MaSettingsPanel
                   maConfigs={state.maConfigs}
@@ -223,16 +223,11 @@ export default function ChartTradeTrainer() {
                 />
                 <ControlPanel
                   fileLoaded={state.fileLoaded}
-                  isReplay={state.isReplay}
-                  replayDate={state.replayDate}
                   showWeeklyChart={state.showWeeklyChart}
                   ticker={ticker}
                   onTickerChange={setTicker}
                   onFetchData={() => handleFetchData(ticker)}
                   isLoading={isLoading}
-                  onStartReplay={handleStartReplay}
-                  onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
-                  onDateChange={(date) => dispatch({ type: 'SET_REPLAY_DATE', payload: date || null })}
                   onWeeklyChartToggle={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
                   onMaSettingsToggle={() => setIsMaSettingsOpen(true)}
                 />
@@ -273,12 +268,17 @@ export default function ChartTradeTrainer() {
 
         <aside className="flex-none flex flex-col shrink-0 lg:w-[300px]">
           <TradePanel
+            fileLoaded={state.fileLoaded}
             isReplay={state.isReplay}
+            replayDate={state.replayDate}
             positions={state.positions}
             realizedPL={state.realizedPL}
             unrealizedPL={state.unrealizedPL}
             onTrade={(type) => dispatch({ type: 'TRADE', payload: type })}
             onClosePosition={(id) => dispatch({ type: 'CLOSE_POSITION', payload: id })}
+            onStartReplay={handleStartReplay}
+            onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
+            onDateChange={(date) => dispatch({ type: 'SET_REPLAY_DATE', payload: date || null })}
           />
         </aside>
       </div>
