@@ -4,7 +4,6 @@ import React, { useEffect, useRef } from 'react';
 import { createChart, IChartApi, ISeriesApi, UTCTimestamp, Time, LineStyle, CrosshairMode, PriceScaleMode, LogicalRange } from 'lightweight-charts';
 import type { CandleData, LineData, Position, Trade, MAConfig } from '@/types';
 import { DraggableWindow } from './draggable-window';
-import { calculateMA } from '@/lib/data-helpers';
 
 interface StockChartProps {
   dailyData: CandleData[];
@@ -13,6 +12,7 @@ interface StockChartProps {
   tradeHistory: Trade[];
   replayIndex: number | null;
   maConfigs: Record<string, MAConfig>;
+  maData: Record<string, LineData[]>;
   showWeeklyChart: boolean;
   onCloseWeeklyChart: () => void;
   isLogScale: boolean;
@@ -94,6 +94,7 @@ export function StockChart({
   tradeHistory,
   replayIndex,
   maConfigs,
+  maData,
   showWeeklyChart,
   onCloseWeeklyChart,
   isLogScale,
@@ -123,21 +124,6 @@ export function StockChart({
     chart.priceScale('volume_scale').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     volumeSeriesRef.current = volumeSeries;
 
-    // Initialize MA Series
-    Object.values(maConfigs).forEach(config => {
-      const period = config.period.toString();
-      if (!maSeriesRefs.current[period]) {
-        const series = chart.addLineSeries({
-          color: config.color,
-          lineWidth: 2,
-          lastValueVisible: false,
-          priceLineVisible: false,
-          visible: config.visible,
-        });
-        maSeriesRefs.current[period] = series;
-      }
-    });
-
     const handleResize = () => chart.applyOptions({ width: chartContainerRef.current!.clientWidth, height: chartContainerRef.current!.clientHeight });
     window.addEventListener('resize', handleResize);
 
@@ -147,7 +133,7 @@ export function StockChart({
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
+
   useEffect(() => {
     if (chartRef.current) {
       chartRef.current.priceScale('right').applyOptions({ mode: isLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal });
@@ -155,37 +141,53 @@ export function StockChart({
   }, [isLogScale]);
 
   useEffect(() => {
-    if (candleSeriesRef.current && volumeSeriesRef.current && chartRef.current) {
+    if (!chartRef.current || !maData) return;
+
+    if (candleSeriesRef.current && volumeSeriesRef.current) {
       candleSeriesRef.current.setData(chartData);
-      
       const volumeData = chartData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)' }));
       volumeSeriesRef.current.setData(volumeData);
-      
-      // Calculate and set MA data based on the current chartData
-      Object.values(maConfigs).forEach(config => {
-        const period = config.period.toString();
-        const series = maSeriesRefs.current[period];
-        if (series) {
-          const maData = calculateMA(chartData, config.period);
-          series.setData(maData);
-          series.applyOptions({ visible: config.visible });
-        }
-      });
-
-      if (replayIndex === null) {
-        const dataLength = chartData.length;
-        if (dataLength > 0) {
-            const logicalRange: LogicalRange = {
-                from: Math.max(0, dataLength - 120),
-                to: dataLength,
-            };
-            chartRef.current.timeScale().setVisibleLogicalRange(logicalRange);
-        }
-      } else {
-         chartRef.current.timeScale().scrollToPosition(chartData.length, false);
-      }
     }
-  }, [chartData, maConfigs, replayIndex]);
+    
+    Object.values(maConfigs).forEach(config => {
+        const period = config.period.toString();
+        let series = maSeriesRefs.current[period];
+        if (!series) {
+            series = chartRef.current!.addLineSeries({
+                color: config.color,
+                lineWidth: 2,
+                lastValueVisible: false,
+                priceLineVisible: false,
+            });
+            maSeriesRefs.current[period] = series;
+        }
+        
+        const dataForMa = maData[period] || [];
+        const lastVisibleTime = replayIndex !== null ? chartData[chartData.length - 1]?.time : undefined;
+
+        let filteredMaData = dataForMa;
+        if (lastVisibleTime) {
+            const lastVisibleDate = new Date(lastVisibleTime as string).getTime();
+            filteredMaData = dataForMa.filter(d => new Date(d.time as string).getTime() <= lastVisibleDate);
+        }
+
+        series.setData(filteredMaData);
+        series.applyOptions({ visible: config.visible });
+    });
+
+    if (replayIndex === null) {
+      const dataLength = chartData.length;
+      if (dataLength > 0) {
+          const logicalRange: LogicalRange = {
+              from: Math.max(0, dataLength - 120),
+              to: dataLength,
+          };
+          chartRef.current.timeScale().setVisibleLogicalRange(logicalRange);
+      }
+    } else {
+       chartRef.current.timeScale().scrollToPosition(chartData.length, false);
+    }
+  }, [maData, maConfigs, chartData, replayIndex]);
   
   useEffect(() => {
     if (!candleSeriesRef.current) return;
@@ -225,3 +227,5 @@ export function StockChart({
     </div>
   );
 }
+
+    

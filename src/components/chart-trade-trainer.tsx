@@ -4,7 +4,7 @@ import React, { useReducer, useCallback, useMemo, useState, useEffect } from 're
 import { getStockData } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { generateWeeklyData, calculateMA } from '@/lib/data-helpers';
-import type { AppState, CandleData, MAConfig, Position, Trade } from '@/types';
+import type { AppState, CandleData, LineData, MAConfig, Position, Trade } from '@/types';
 import { StockChart } from './stock-chart';
 import { ControlPanel } from './control-panel';
 import { TradePanel } from './trade-panel';
@@ -30,7 +30,16 @@ const initialMAConfigs: Record<string, MAConfig> = {
   '100': { period: 100, color: '#FDD835', visible: false },
 };
 
-const initialState: AppState & { replayDate: Date | null, unrealizedPL: number, realizedPL: number, isLogScale: boolean } = {
+type AppStateWithLocal = AppState & { 
+  replayDate: Date | null, 
+  unrealizedPL: number, 
+  realizedPL: number, 
+  isLogScale: boolean,
+  maData: Record<string, LineData[]>,
+};
+
+
+const initialState: AppStateWithLocal = {
   chartData: [],
   weeklyData: [],
   chartTitle: 'ChartTrade Trainer',
@@ -43,27 +52,30 @@ const initialState: AppState & { replayDate: Date | null, unrealizedPL: number, 
   realizedPL: 0,
   unrealizedPL: 0,
   maConfigs: initialMAConfigs,
+  maData: {},
   showWeeklyChart: false,
   isLogScale: false,
 };
 
-function reducer(state: typeof initialState, action: Action): typeof initialState {
+function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
   switch (action.type) {
     case 'SET_CHART_DATA': {
       const { data, title } = action.payload;
+      const maData = Object.fromEntries(
+        Object.values(initialMAConfigs).map(config => [
+            config.period.toString(),
+            calculateMA(data, config.period)
+        ])
+      );
+      
       return {
-        ...state,
+        ...initialState,
         chartData: data,
         weeklyData: generateWeeklyData(data),
+        maData: maData,
         chartTitle: title,
         fileLoaded: true,
-        replayIndex: null,
-        isReplay: false,
-        replayDate: null,
-        positions: [],
-        tradeHistory: [],
-        realizedPL: 0,
-        unrealizedPL: 0,
+        maConfigs: state.maConfigs, // Keep user's visibility settings
       };
     }
     case 'START_REPLAY': {
@@ -203,11 +215,12 @@ export default function ChartTradeTrainer() {
       tradeHistory={state.tradeHistory}
       replayIndex={state.replayIndex}
       maConfigs={state.maConfigs}
+      maData={state.maData}
       showWeeklyChart={state.showWeeklyChart}
       onCloseWeeklyChart={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
       isLogScale={state.isLogScale}
     />
-  ), [state.chartData, state.weeklyData, state.positions, state.tradeHistory, state.replayIndex, state.maConfigs, state.showWeeklyChart, state.isLogScale]);
+  ), [state.chartData, state.weeklyData, state.positions, state.tradeHistory, state.replayIndex, state.maConfigs, state.maData, state.showWeeklyChart, state.isLogScale]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] lg:grid-cols-[320px_1fr_300px] h-screen max-h-screen overflow-hidden font-body">
@@ -267,3 +280,5 @@ export default function ChartTradeTrainer() {
     </div>
   );
 }
+
+    
