@@ -143,12 +143,10 @@ export function StockChart({
   useEffect(() => {
     if (!chartRef.current || !candleSeriesRef.current || !volumeSeriesRef.current) return;
 
-    // Set candlestick and volume data
     candleSeriesRef.current.setData(chartData);
     const volumeData = chartData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)' }));
     volumeSeriesRef.current.setData(volumeData);
-    
-    // Set MA data and visibility
+
     Object.values(maConfigs).forEach(config => {
         const period = config.period.toString();
         const series = maSeriesRefs.current[period];
@@ -159,13 +157,32 @@ export function StockChart({
         }
     });
 
-    // Scroll to the latest bar
     const dataLength = chartData.length;
-    if (dataLength > 0) {
-        chartRef.current.timeScale().scrollToPosition(dataLength - 1, false);
+    if (dataLength > 1) {
+        const lastDataPoint = chartData[dataLength - 1];
+        const secondLastDataPoint = chartData[dataLength - 2];
+        
+        // Ensure time is a UTCTimestamp
+        const toUTCTimestamp = (time: Time): UTCTimestamp => {
+            if (typeof time === 'string') {
+                return Math.floor(new Date(time).getTime() / 1000) as UTCTimestamp;
+            }
+            return time as UTCTimestamp;
+        };
+
+        const lastTime = toUTCTimestamp(lastDataPoint.time);
+        const secondLastTime = toUTCTimestamp(secondLastDataPoint.time);
+
+        const timeDiff = lastTime - secondLastTime;
+        
+        const from = dataLength > 30 ? dataLength - 30 : 0;
+        const to = dataLength + 5;
+
+        // Use logical range for setting visible range
+        chartRef.current.timeScale().setVisibleLogicalRange({ from, to });
     }
     
-  }, [chartData, maConfigs, replayIndex]);
+  }, [chartData, maConfigs]);
   
   useEffect(() => {
     if (!candleSeriesRef.current) return;
