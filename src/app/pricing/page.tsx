@@ -91,6 +91,7 @@ export default function PricingPage() {
           </CardHeader>
           <CardContent>
             <ul className="list-disc list-inside space-y-2">
+              <li>フリープランの全機能</li>
               <li>移動平均線の表示（5MA, 10MA, 20MA, 50MA, 100MA ）</li>
               <li>高度なテクニカル指標（RSI, MACDなど）</li>
               <li>高度なデモ取引機能（空売り／買戻しなど）</li>
