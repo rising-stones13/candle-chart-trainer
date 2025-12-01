@@ -37,15 +37,24 @@ interface StockChartProps {
   downColor: string;
   volumeConfig: VolumeConfig;
   isPremium: boolean;
+  chartTitle: string; // Add chartTitle to props
 }
 
-const getChartOptions = (upColor: string, downColor:string) => ({
+const getChartOptions = (upColor: string, downColor:string, title: string) => ({ // Add title parameter
   layout: {
     background: { type: ColorType.Solid, color: '#15191E' },
     textColor: 'rgba(230, 230, 230, 0.9)',
     fontSize: 12,
     fontFamily: 'Inter, sans-serif',
     attributionLogo: false,
+  },
+  watermark: { // Add watermark option
+    visible: true,
+    fontSize: 16,
+    horzAlign: 'left',
+    vertAlign: 'top',
+    color: 'rgba(255, 255, 255, 0.5)',
+    text: title,
   },
   grid: {
     vertLines: { color: '#2a2e39', style: LineStyle.Solid, visible: true },
@@ -113,10 +122,6 @@ const getChartOptions = (upColor: string, downColor:string) => ({
   handleScroll: true,
   handleScale: true,
   autoSize: false, // Set to false to use ResizeObserver manually
-  watermark: {
-      visible: false,
-  },
-  // Other options...
 });
 
 const getCandleSeriesOptions = (upColor: string, downColor: string) => ({
@@ -135,7 +140,7 @@ function WeeklyChart({ data, upColor, downColor }: { data: CandleData[], upColor
     if (!chartContainerRef.current) return;
 
     const chartOptions = {
-        ...getChartOptions(upColor, downColor),
+        ...getChartOptions(upColor, downColor, ''), // Pass empty string for title in weekly chart
     };
     const chart = createChart(chartContainerRef.current, chartOptions as TimeChartOptions);
     
@@ -173,6 +178,7 @@ export function StockChart({
   downColor,
   volumeConfig,
   isPremium,
+  chartTitle, // Add chartTitle to destructuring
 }: StockChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -182,7 +188,7 @@ export function StockChart({
     if (!chartContainerRef.current) return;
     
     const chart = createChart(chartContainerRef.current, {
-      ...getChartOptions(upColor, downColor),
+      ...getChartOptions(upColor, downColor, chartTitle), // Pass chartTitle
     } as TimeChartOptions);
     chartRef.current = chart;
     

@@ -446,6 +446,7 @@ export default function ChartTradeTrainer() {
                 downColor={state.downColor}
                 volumeConfig={state.volumeConfig}
                 isPremium={!!userData?.isPremium}
+                chartTitle={state.chartTitle}
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
