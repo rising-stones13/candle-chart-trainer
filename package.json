@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 9002",
+    "dev": "concurrently \"next dev --turbopack -p 9002\" \"~/projects/webapps/bin/stripe listen --forward-to localhost:9002/api/stripe-webhook\"",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "NODE_ENV=production next build",
@@ -63,6 +63,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "concurrently": "^9.2.1",
     "eslint-config-next": "16.0.5",
     "genkit-cli": "^1.20.0",
     "postcss": "^8",
