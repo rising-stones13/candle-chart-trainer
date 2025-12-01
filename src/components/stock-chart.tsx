@@ -12,10 +12,6 @@ import {
   LineStyle, 
   ColorType,
   PriceScaleMode,
-  UTCTimestamp,
-  BusinessDay,
-  SeriesMarker,
-  SeriesMarkerPosition,
   Time
 } from 'lightweight-charts';
 import { calculateMA } from '@/lib/data-helpers';
@@ -37,10 +33,10 @@ interface StockChartProps {
   downColor: string;
   volumeConfig: VolumeConfig;
   isPremium: boolean;
-  chartTitle: string; // Add chartTitle to props
+  chartTitle: string;
 }
 
-const getChartOptions = (upColor: string, downColor:string, title: string) => ({ // Add title parameter
+const getChartOptions = (upColor: string, downColor:string, title: string) => ({
   layout: {
     background: { type: ColorType.Solid, color: '#15191E' },
     textColor: 'rgba(230, 230, 230, 0.9)',
@@ -48,7 +44,7 @@ const getChartOptions = (upColor: string, downColor:string, title: string) => ({
     fontFamily: 'Inter, sans-serif',
     attributionLogo: false,
   },
-  watermark: { // Add watermark option
+  watermark: {
     visible: true,
     fontSize: 16,
     horzAlign: 'left',
@@ -121,7 +117,7 @@ const getChartOptions = (upColor: string, downColor:string, title: string) => ({
   },
   handleScroll: true,
   handleScale: true,
-  autoSize: false, // Set to false to use ResizeObserver manually
+  autoSize: false,
 });
 
 const getCandleSeriesOptions = (upColor: string, downColor: string) => ({
@@ -133,33 +129,43 @@ const getCandleSeriesOptions = (upColor: string, downColor: string) => ({
   wickUpColor: upColor,
 });
 
-function WeeklyChart({ data, upColor, downColor }: { data: CandleData[], upColor: string, downColor: string }) {
+interface WeeklyChartProps {
+  data: CandleData[];
+  upColor: string;
+  downColor: string;
+  size: { width: number; height: number };
+}
+
+function WeeklyChart({ data, upColor, downColor, size }: WeeklyChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
     const chartOptions = {
-        ...getChartOptions(upColor, downColor, ''), // Pass empty string for title in weekly chart
+      ...getChartOptions(upColor, downColor, '週足チャート'),
+      width: size.width,
+      height: size.height,
     };
     const chart = createChart(chartContainerRef.current, chartOptions as TimeChartOptions);
+    chartRef.current = chart;
     
     const candleSeries = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
     candleSeries.setData(data);
     
-    const resizeObserver = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
-      chart.applyOptions({ width, height });
-    });
-
-    resizeObserver.observe(chartContainerRef.current);
-
     return () => {
-      resizeObserver.disconnect();
       chart.remove();
+      chartRef.current = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, upColor, downColor]);
   
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({ width: size.width, height: size.height });
+  }, [size]);
+
   return <div ref={chartContainerRef} className="w-full h-full" />;
 }
 
@@ -178,7 +184,7 @@ export function StockChart({
   downColor,
   volumeConfig,
   isPremium,
-  chartTitle, // Add chartTitle to destructuring
+  chartTitle,
 }: StockChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -188,7 +194,7 @@ export function StockChart({
     if (!chartContainerRef.current) return;
     
     const chart = createChart(chartContainerRef.current, {
-      ...getChartOptions(upColor, downColor, chartTitle), // Pass chartTitle
+      ...getChartOptions(upColor, downColor, chartTitle),
     } as TimeChartOptions);
     chartRef.current = chart;
     
@@ -211,7 +217,6 @@ export function StockChart({
     seriesRef.current.macdHistogram = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
     chart.priceScale('macd').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
     
-    // --- Resize Observer ---
     const resizeObserver = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect;
       chart.applyOptions({ width, height });
@@ -226,7 +231,6 @@ export function StockChart({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
-  // Effect for updating data and dynamic options
   useEffect(() => {
     if (!chartRef.current || !seriesRef.current.candle) return;
     
@@ -295,7 +299,7 @@ export function StockChart({
     
     const positionMarkers = positions.map(p => ({ 
         time: p.date, 
-        position: (p.type === 'long' ? 'belowBar' : 'aboveBar') as SeriesMarkerPosition, 
+        position: (p.type === 'long' ? 'belowBar' : 'aboveBar'), 
         color: p.type === 'long' ? '#2196F3' : '#F44336', 
         shape: 'circle' as const, 
         text: `${p.type.charAt(0).toUpperCase()}` 
@@ -317,7 +321,7 @@ export function StockChart({
       <div ref={chartContainerRef} className="w-full h-full" />
       {showWeeklyChart && (
         <DraggableWindow title="週足チャート" isOpen={showWeeklyChart} onClose={onCloseWeeklyChart}>
-          <WeeklyChart data={weeklyData} upColor={upColor} downColor={downColor} />
+          {(size) => <WeeklyChart data={weeklyData} upColor={upColor} downColor={downColor} size={size} />}
         </DraggableWindow>
       )}
     </div>
