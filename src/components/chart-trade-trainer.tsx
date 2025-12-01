@@ -190,7 +190,6 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
 
         let newPositions = [...state.positions];
         if (remainingEntries.length === 0) {
-            // Position is fully closed
             newPositions = state.positions.filter(p => p.type !== positionType);
         } else {
             const newTotalSize = remainingEntries.reduce((sum, e) => sum + e.size, 0);
@@ -304,7 +303,6 @@ export default function ChartTradeTrainer() {
       toast({ variant: 'destructive', title: 'エラー', description: errorMessage });
     } finally {
       setIsLoading(false);
-      // Reset file input to allow re-uploading the same file
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -421,9 +419,11 @@ export default function ChartTradeTrainer() {
           </div>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        <main className="flex flex-col bg-background flex-1 min-h-0">
-          <div className="flex-grow relative">
+      {/* Main content area using CSS Grid */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_300px] grid-rows-[1fr_400px] lg:grid-rows-1 min-h-0">
+        {/* Chart Area */}
+        <main className="relative min-w-0 min-h-0">
+          <div className="absolute inset-0">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                 <Loader2 className="w-16 h-16 mb-4 animate-spin" />
@@ -457,19 +457,22 @@ export default function ChartTradeTrainer() {
           </div>
         </main>
 
-        <aside className="flex-none flex flex-col shrink-0 lg:w-[300px] h-[400px] lg:h-full">
-          <TradePanel
-            fileLoaded={state.fileLoaded}
-            isReplay={state.isReplay}
-            replayDate={state.isReplay && state.replayIndex !== null ? new Date((state.chartData[state.replayIndex].time as number) * 1000) : null}
-            positions={state.positions}
-            realizedPL={state.realizedPL}
-            unrealizedPL={state.unrealizedPL}
-            onTrade={(type) => dispatch({ type: 'TRADE', payload: type })}
-            onClosePosition={handlePartialClose}
-            onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
-            onDateChange={handleDateChange}
-          />
+        {/* Trade Panel Area */}
+        <aside className="relative lg:border-l border-t lg:border-t-0">
+          <div className="absolute inset-0 h-full w-full">
+            <TradePanel
+              fileLoaded={state.fileLoaded}
+              isReplay={state.isReplay}
+              replayDate={state.isReplay && state.replayIndex !== null ? new Date((state.chartData[state.replayIndex].time as number) * 1000) : null}
+              positions={state.positions}
+              realizedPL={state.realizedPL}
+              unrealizedPL={state.unrealizedPL}
+              onTrade={(type) => dispatch({ type: 'TRADE', payload: type })}
+              onClosePosition={handlePartialClose}
+              onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
+              onDateChange={handleDateChange}
+            />
+          </div>
         </aside>
       </div>
     </div>

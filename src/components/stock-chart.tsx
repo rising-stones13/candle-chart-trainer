@@ -105,7 +105,6 @@ const getChartOptions = (upColor: string, downColor:string) => ({
     uniformDistribution: false,
     minimumHeight: 0,
     allowBoldLabels: false,
-
   },
   localization: {
     locale: 'en-US',
@@ -113,47 +112,11 @@ const getChartOptions = (upColor: string, downColor:string) => ({
   },
   handleScroll: true,
   handleScale: true,
-  autoSize: false,
+  autoSize: false, // Set to false to use ResizeObserver manually
   watermark: {
       visible: false,
-      text: '',
-      fontSize: 48,
-      fontFamily: 'Inter, sans-serif',
-      fontStyle: '',
-      color: 'rgba(0, 0, 0, 0)',
-      horzAlign: 'center',
-      vertAlign: 'center',
   },
-  leftPriceScale: {
-      visible: false,
-      autoScale: false,
-      mode: PriceScaleMode.Normal,
-      invertScale: false,
-      alignLabels: false,
-      borderVisible: false,
-      borderColor: '',
-      scaleMargins: {
-        top: 0,
-        bottom: 0,
-      },
-      entireTextOnly: false,
-      ticksVisible: false,
-      minimumWidth: 0,
-  },
-  overlayPriceScales: {
-    mode: PriceScaleMode.Normal,
-    invertScale: false,
-    alignLabels: false,
-    scaleMargins: {
-      top: 0,
-      bottom: 0,
-    },
-    borderVisible: false,
-    borderColor: '',
-    entireTextOnly: false,
-    ticksVisible: false,
-    minimumWidth: 0,
-  },
+  // Other options...
 });
 
 const getCandleSeriesOptions = (upColor: string, downColor: string) => ({
@@ -179,11 +142,15 @@ function WeeklyChart({ data, upColor, downColor }: { data: CandleData[], upColor
     const candleSeries = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
     candleSeries.setData(data);
     
-    const handleResize = () => chart.applyOptions({ width: chartContainerRef.current!.clientWidth, height: chartContainerRef.current!.clientHeight });
-    window.addEventListener('resize', handleResize);
+    const resizeObserver = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      chart.applyOptions({ width, height });
+    });
+
+    resizeObserver.observe(chartContainerRef.current);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       chart.remove();
     };
   }, [data, upColor, downColor]);
@@ -219,52 +186,35 @@ export function StockChart({
     } as TimeChartOptions);
     chartRef.current = chart;
     
+    // --- Series Creation ---
     seriesRef.current.candle = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
-    
     seriesRef.current.volume = chart.addHistogramSeries({
       priceFormat: { type: 'volume' },
       priceScaleId: 'volume',
       priceLineVisible: false,
     });
     chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-
     Object.values(maConfigs).forEach(config => {
         const period = config.period.toString();
-        seriesRef.current[`ma${period}`] = chart.addLineSeries({
-            color: config.color,
-            lineWidth: 2,
-            lastValueVisible: false,
-            priceLineVisible: false,
-        });
+        seriesRef.current[`ma${period}`] = chart.addLineSeries({ color: config.color, lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
     });
-    
-    seriesRef.current.rsi = chart.addLineSeries({
-        priceScaleId: 'rsi',
-        color: '#FFC107',
-        lineWidth: 2,
-        lastValueVisible: false,
-        priceLineVisible: false,
-    });
+    seriesRef.current.rsi = chart.addLineSeries({ priceScaleId: 'rsi', color: '#FFC107', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
     chart.priceScale('rsi').applyOptions({ scaleMargins: { top: 0.9, bottom: 0 } });
-
     seriesRef.current.macdLine = chart.addLineSeries({ priceScaleId: 'macd', color: '#2196F3', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
     seriesRef.current.macdSignal = chart.addLineSeries({ priceScaleId: 'macd', color: '#FF5252', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
-    seriesRef.current.macdHistogram = chart.addHistogramSeries({
-        priceScaleId: 'macd',
-        priceFormat: { type: 'volume' },
-        lastValueVisible: false,
-        priceLineVisible: false,
-    });
+    seriesRef.current.macdHistogram = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
     chart.priceScale('macd').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
-
-
-    const handleResize = () => {
-        chart.applyOptions({ width: chartContainerRef.current!.clientWidth });
-    };
-    window.addEventListener('resize', handleResize);
     
+    // --- Resize Observer ---
+    const resizeObserver = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      chart.applyOptions({ width, height });
+    });
+
+    resizeObserver.observe(chartContainerRef.current);
+
     return () => {
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       chart.remove();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -322,24 +272,12 @@ export function StockChart({
   useEffect(() => {
     if (!chartRef.current) return;
     
-    // Only scroll to the end when in replay mode
     if (replayIndex !== null) {
         const dataLength = chartData.length;
         const to = dataLength > 0 ? dataLength - 1 : 0;
         chartRef.current.timeScale().scrollToPosition(to, false);
     }
-    // When not in replay mode (replayIndex is null), do nothing and let the chart use its default view.
   }, [replayIndex, chartData.length]);
-
-  const timeToNumber = (time: Time): number => {
-    if (typeof time === 'string') {
-        return new Date(time).getTime() / 1000;
-    }
-    if (typeof time === 'object' && 'year' in time) { // BusinessDay
-        return new Date(Date.UTC(time.year, time.month - 1, time.day)).getTime() / 1000;
-    }
-    return time as number; // UTCTimestamp
-  };
 
   useEffect(() => {
     if (!seriesRef.current.candle) return;
@@ -358,8 +296,11 @@ export function StockChart({
     }));
 
     const allMarkers: SeriesMarker<Time>[] = [...tradeMarkers, ...positionMarkers];
-
-    const sortedMarkers = allMarkers.sort((a, b) => timeToNumber(a.time) - timeToNumber(b.time));
+    const sortedMarkers = allMarkers.sort((a, b) => {
+        const timeA = typeof a.time === 'string' ? new Date(a.time).getTime() / 1000 : a.time as number;
+        const timeB = typeof b.time === 'string' ? new Date(b.time).getTime() / 1000 : b.time as number;
+        return timeA - timeB;
+    });
     
     seriesRef.current.candle.setMarkers(sortedMarkers);
     
