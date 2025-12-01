@@ -134,11 +134,14 @@ interface WeeklyChartProps {
   upColor: string;
   downColor: string;
   size: { width: number; height: number };
+  maConfigs: Record<string, MAConfig>;
+  isPremium: boolean;
 }
 
-function WeeklyChart({ data, upColor, downColor, size }: WeeklyChartProps) {
+function WeeklyChart({ data, upColor, downColor, size, maConfigs, isPremium }: WeeklyChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<Record<string, ISeriesApi<any>>>({});
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -153,6 +156,17 @@ function WeeklyChart({ data, upColor, downColor, size }: WeeklyChartProps) {
     
     const candleSeries = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
     candleSeries.setData(data);
+    seriesRef.current.candle = candleSeries;
+
+    Object.values(maConfigs).forEach(config => {
+      const series = chart.addLineSeries({ 
+        color: config.color, 
+        lineWidth: 2, 
+        lastValueVisible: false, 
+        priceLineVisible: false 
+      });
+      seriesRef.current[`ma${config.period}`] = series;
+    });
     
     return () => {
       chart.remove();
@@ -165,6 +179,19 @@ function WeeklyChart({ data, upColor, downColor, size }: WeeklyChartProps) {
     if (!chartRef.current) return;
     chartRef.current.applyOptions({ width: size.width, height: size.height });
   }, [size]);
+
+  useEffect(() => {
+    if (!chartRef.current || data.length === 0) return;
+
+    Object.values(maConfigs).forEach(config => {
+      const series = seriesRef.current[`ma${config.period}`];
+      if (series) {
+        const maData = calculateMA(data, config.period);
+        series.setData(maData);
+        series.applyOptions({ visible: isPremium && config.visible });
+      }
+    });
+  }, [data, maConfigs, isPremium]);
 
   return <div ref={chartContainerRef} className="w-full h-full" />;
 }
@@ -321,7 +348,14 @@ export function StockChart({
       <div ref={chartContainerRef} className="w-full h-full" />
       {showWeeklyChart && (
         <DraggableWindow title="週足チャート" isOpen={showWeeklyChart} onClose={onCloseWeeklyChart}>
-          {(size) => <WeeklyChart data={weeklyData} upColor={upColor} downColor={downColor} size={size} />}
+          {(size) => <WeeklyChart 
+            data={weeklyData} 
+            upColor={upColor} 
+            downColor={downColor} 
+            size={size} 
+            maConfigs={maConfigs} 
+            isPremium={isPremium} 
+          />}
         </DraggableWindow>
       )}
     </div>
