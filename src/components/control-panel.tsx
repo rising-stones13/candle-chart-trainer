@@ -101,16 +101,23 @@ export function ControlPanel({
         </Label>
         <div className="space-y-4 pt-2">
           {Object.values(maConfigs).map(config => (
-            <div key={config.period} className="flex items-center justify-between">
-              <Label htmlFor={`ma-toggle-${config.period}`} className="text-base" style={{ color: config.color }}>
-                {config.period}日 MA
-              </Label>
-              <Switch
-                id={`ma-toggle-${config.period}`}
-                checked={config.visible}
-                onCheckedChange={() => onMaToggle(config.period.toString())}
-              />
-            </div>
+            <PremiumFeature key={config.period} featureName={`${config.period}日 MA`}>
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor={`ma-toggle-${config.period}`}
+                  className={`text-base ${!isPremium ? 'text-muted-foreground' : ''}`}
+                  style={{ color: isPremium ? config.color : undefined }}
+                >
+                  {config.period}日 MA
+                </Label>
+                <Switch
+                  id={`ma-toggle-${config.period}`}
+                  checked={isPremium && config.visible}
+                  onCheckedChange={() => onMaToggle(config.period.toString())}
+                  disabled={!isPremium}
+                />
+              </div>
+            </PremiumFeature>
           ))}
           <Separator />
           <div className="flex items-center justify-between">

@@ -36,6 +36,7 @@ interface StockChartProps {
   upColor: string;
   downColor: string;
   volumeConfig: VolumeConfig;
+  isPremium: boolean;
 }
 
 const getChartOptions = (upColor: string, downColor:string) => ({
@@ -204,6 +205,7 @@ export function StockChart({
   upColor,
   downColor,
   volumeConfig,
+  isPremium,
 }: StockChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -291,7 +293,7 @@ export function StockChart({
         if (series) {
             const maData = calculateMA(currentData, config.period);
             series.setData(maData);
-            series.applyOptions({ visible: config.visible });
+            series.applyOptions({ visible: isPremium && config.visible });
         }
     });
 
@@ -315,7 +317,7 @@ export function StockChart({
         chartRef.current.priceScale('macd').applyOptions({ visible: isVisible });
     }
 
-  }, [chartData, replayIndex, maConfigs, rsiData, macdData, upColor, downColor, volumeConfig]);
+  }, [chartData, replayIndex, maConfigs, rsiData, macdData, upColor, downColor, volumeConfig, isPremium]);
   
   useEffect(() => {
     if (!chartRef.current) return;

@@ -116,6 +116,30 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
+
+        const usersRef = db.collection('users');
+        const snapshot = await usersRef.where('stripeCustomerId', '==', customerId).get();
+
+        if (snapshot.empty) {
+          console.error(`No user found with Stripe customer ID ${customerId} for subscription update.`);
+          break;
+        }
+
+        const newPremiumStatus = subscription.status === 'active' || subscription.status === 'trialing';
+
+        for (const doc of snapshot.docs) {
+          await doc.ref.update({
+            isPremium: newPremiumStatus,
+            currentPeriodEnd: subscription.current_period_end,
+          });
+          console.log(`Updated premium status for user ${doc.id} to ${newPremiumStatus}`);
+        }
+        break;
+      }
+
       // Handle subscription cancellations
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useReducer, useCallback, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useReducer, useCallback, useMemo, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 import { generateWeeklyData, parseStockData, calculateRSI, calculateMACD } from '@/lib/data-helpers';
 import type { AppState, CandleData, MAConfig, Position, Trade, PositionEntry, RSIConfig, MACDConfig, VolumeConfig } from '@/types';
 import { StockChart } from './stock-chart';
@@ -22,6 +23,7 @@ type Action =
   | { type: 'TOGGLE_RSI' }
   | { type: 'TOGGLE_MACD' }
   | { type: 'TOGGLE_VOLUME' }
+  | { type: 'RESET_PREMIUM_FEATURES' }
   | { type: 'TOGGLE_WEEKLY_CHART' }
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'SET_CANDLE_COLOR'; payload: { target: 'upColor' | 'downColor'; color: string } };
@@ -246,6 +248,18 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
             volumeConfig: { ...state.volumeConfig, visible: !state.volumeConfig.visible },
         };
     }
+    case 'RESET_PREMIUM_FEATURES': {
+        const newMaConfigs = { ...state.maConfigs };
+        for (const key in newMaConfigs) {
+            newMaConfigs[key] = { ...newMaConfigs[key], visible: false };
+        }
+        return {
+            ...state,
+            maConfigs: newMaConfigs,
+            rsiConfig: { ...state.rsiConfig, visible: false },
+            macdConfig: { ...state.macdConfig, visible: false },
+        };
+    }
     case 'TOGGLE_WEEKLY_CHART':
       return { ...state, showWeeklyChart: !state.showWeeklyChart };
     case 'SET_CANDLE_COLOR':
@@ -260,10 +274,17 @@ function reducer(state: AppStateWithLocal, action: Action): AppStateWithLocal {
 
 export default function ChartTradeTrainer() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const { userData } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isControlPanelOpen, setIsControlPanelOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (userData && !userData.isPremium) {
+      dispatch({ type: 'RESET_PREMIUM_FEATURES' });
+    }
+  }, [userData]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -424,6 +445,7 @@ export default function ChartTradeTrainer() {
                 upColor={state.upColor}
                 downColor={state.downColor}
                 volumeConfig={state.volumeConfig}
+                isPremium={!!userData?.isPremium}
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">

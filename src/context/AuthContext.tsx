@@ -56,21 +56,69 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let unsubscribeFromUserData: (() => void) | undefined;
 
-    const unsubscribeFromAuth = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-                  const userDocRef = doc(db, 'users', user.uid);
-                // Subscribe to user data changes
-                unsubscribeFromUserData = onSnapshot(userDocRef, (doc) => {
-                  if (doc.exists()) {
-                    const data = doc.data() as UserData;
-                    setUserData(data);
-                    console.log('AuthContext: User data updated, isPremium:', data.isPremium); // Add this log
-                  } else {
-                    setUserData(null);
-                    console.log('AuthContext: User document does not exist.'); // Add this log
-                  }
-                });      } else {
+        const unsubscribeFromAuth = onAuthStateChanged(auth, async (user) => {
+
+          setUser(user);
+
+          if (user) {
+
+            // Sync Stripe status in the background
+
+            (async () => {
+
+              try {
+
+                const token = await user.getIdToken();
+
+                await fetch('/api/sync-stripe-status', {
+
+                  method: 'POST',
+
+                  headers: {
+
+                    'Authorization': `Bearer ${token}`,
+
+                  },
+
+                });
+
+                console.log('AuthContext: Stripe status sync requested.');
+
+              } catch (error) {
+
+                console.error('AuthContext: Error syncing Stripe status:', error);
+
+              }
+
+            })();
+
+    
+
+            const userDocRef = doc(db, 'users', user.uid);
+
+            // Subscribe to user data changes
+
+            unsubscribeFromUserData = onSnapshot(userDocRef, (doc) => {
+
+                      if (doc.exists()) {
+
+                        const data = doc.data() as UserData;
+
+                        setUserData(data);
+
+                        console.log('AuthContext: User data updated, isPremium:', data.isPremium); // Add this log
+
+                      } else {
+
+                        setUserData(null);
+
+                        console.log('AuthContext: User document does not exist.'); // Add this log
+
+                      }
+
+                    });      
+
+        } else {
         // If user logs out, clear user data and unsubscribe from user data changes
         if (unsubscribeFromUserData) {
           unsubscribeFromUserData();
