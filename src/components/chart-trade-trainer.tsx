@@ -457,7 +457,7 @@ export default function ChartTradeTrainer() {
           </div>
         </main>
 
-        <aside className="flex-none flex flex-col shrink-0 lg:w-[300px]">
+        <aside className="flex-none flex flex-col shrink-0 lg:w-[300px] h-[400px] lg:h-full">
           <TradePanel
             fileLoaded={state.fileLoaded}
             isReplay={state.isReplay}
