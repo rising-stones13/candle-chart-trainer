@@ -7,12 +7,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowDown, ArrowUp, CalendarIcon, Play } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Separator } from './ui/separator';
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 interface TradePanelProps {
   fileLoaded: boolean;
@@ -41,6 +44,7 @@ export function TradePanel({
 }: TradePanelProps) {
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const { userData } = useAuth();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
@@ -53,6 +57,23 @@ export function TradePanel({
     setIsCalendarOpen(false);
   };
 
+  const CalendarButton = (
+    <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
+      <CalendarIcon className="mr-2 h-4 w-4" />
+      {replayDate ? format(replayDate, 'yyyy年M月d日', { locale: ja }) : <span>開始日を選択</span>}
+    </Button>
+  );
+
+  const CalendarContent = (
+    <Calendar 
+      mode="single" 
+      selected={replayDate || undefined} 
+      onSelect={handleDateSelect} 
+      initialFocus
+      locale={ja}
+    />
+  );
+
   return (
     <Card className="h-full flex flex-col border-l">
       <CardHeader className="px-4 py-2">
@@ -60,23 +81,30 @@ export function TradePanel({
       </CardHeader>
       <CardContent className="px-4 pb-4 flex flex-col flex-grow">
         <div className={`space-y-2 mb-2 ${!fileLoaded ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {replayDate ? format(replayDate, 'yyyy年M月d日', { locale: ja }) : <span>開始日を選択</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar 
-                mode="single" 
-                selected={replayDate || undefined} 
-                onSelect={handleDateSelect} 
-                initialFocus
-                locale={ja}
-              />
-            </PopoverContent>
-          </Popover>
+          
+          {isDesktop ? (
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                {CalendarButton}
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                {CalendarContent}
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <DialogTrigger asChild>
+                {CalendarButton}
+              </DialogTrigger>
+              <DialogContent className="w-auto p-4 flex items-start justify-center min-h-[400px]">
+                <VisuallyHidden>
+                  <DialogTitle>カレンダー</DialogTitle>
+                </VisuallyHidden>
+                {CalendarContent}
+              </DialogContent>
+            </Dialog>
+          )}
+
           <div className="grid grid-cols-1 gap-2">
             <Button onClick={onNextDay} disabled={!isReplay} size="sm">
               <Play className="mr-2 h-4 w-4" />
