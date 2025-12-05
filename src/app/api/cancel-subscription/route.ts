@@ -3,53 +3,67 @@ import Stripe from 'stripe';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getSecrets } from '@/lib/secrets';
 
+// エラー応答を生成するヘルパー関数
+function createErrorResponse(message: string, status: number) {
+  return NextResponse.json({ message }, { status });
+}
+
 export async function POST(req: Request) {
   try {
-    // 1. Initialize Firebase Admin and fetch secrets
     const { db } = await getFirebaseAdmin();
     const secrets = await getSecrets();
     const stripeSecretKey = secrets['STRIPE_SECRET_KEY'];
 
     if (!stripeSecretKey) {
-      throw new Error('Stripe secret key not found.');
+      throw new Error('Stripe secret key is not configured.');
     }
 
-    // 2. Initialize Stripe inside the handler
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-06-20', // APIバージョンを最新に合わせることを推奨
+      apiVersion: '2024-06-20',
     });
 
-    const { userId } = await req.json();
+    // リクエストボディを安全にパース
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      return createErrorResponse('Invalid request body', 400);
+    }
+
+    const { userId } = body;
 
     if (!userId) {
-      return new NextResponse(JSON.stringify({ message: 'User ID is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return createErrorResponse('User ID is required', 400);
     }
 
     const userDocRef = db.collection('users').doc(userId);
     const userDoc = await userDocRef.get();
 
     if (!userDoc.exists) {
-      return new NextResponse(JSON.stringify({ message: 'User not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return createErrorResponse('User not found', 404);
     }
 
     const userData = userDoc.data();
     const stripeSubscriptionId = userData?.stripeSubscriptionId;
 
     if (!stripeSubscriptionId) {
-        return new NextResponse(JSON.stringify({ message: 'No active subscription found for this user' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return createErrorResponse('No active subscription found for this user', 400);
     }
 
-    // Stripeサブスクリプションのキャンセル
-    const canceledSubscription = await stripe.subscriptions.cancel(stripeSubscriptionId);
+    // Stripeサブスクリプションのキャンセルを実行
+    await stripe.subscriptions.cancel(stripeSubscriptionId);
 
-    // WebhookがDBを更新するのを待つので、ここでのレスポンスはシンプルに成功を伝える
+    // 成功応答
+    // WebhookがDBを更新するため、クライアントには処理開始を伝える
     return NextResponse.json({ success: true, status: 'cancellation_initiated' });
 
   } catch (error: any) {
-    console.error('Error canceling subscription:', error);
-    let errorMessage = 'Internal Server Error';
+    console.error('Error in /api/cancel-subscription:', error);
+
+    let errorMessage = 'An unexpected error occurred.';
     let statusCode = 500;
 
+    // Stripeからのエラーをハンドリング
     if (error.type && error.type.startsWith('Stripe')) {
       errorMessage = error.message;
       statusCode = error.statusCode || 500;
@@ -57,7 +71,6 @@ export async function POST(req: Request) {
       errorMessage = error.message;
     }
 
-    // ▼▼▼ 【修正】エラー応答をJSON形式に統一 ▼▼▼
-    return NextResponse.json({ message: errorMessage }, { status: statusCode });
+    return createErrorResponse(errorMessage, statusCode);
   }
 }

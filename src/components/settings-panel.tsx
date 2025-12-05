@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 export function SettingsPanel() {
-  const { user, userData, loading, deleteAccount } = useAuth();
+  const { user, userData, loading, deleteAccount } = useAuth(); // `user` object contains the uid
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -34,7 +34,6 @@ export function SettingsPanel() {
         description: "設定情報を更新しました。",
       });
       setIsCanceling(false);
-      // No longer need to refresh the router, data updates via context
     }
   }, [userData, isCanceling, toast]);
 
@@ -55,7 +54,7 @@ export function SettingsPanel() {
         title: "アカウントが削除されました",
         description: "ご利用ありがとうございました。",
       });
-      router.push('/'); // Redirect to home after deletion
+      router.push('/');
     } catch (error: any) {
       console.error("Error deleting account:", error);
       toast({
@@ -71,24 +70,32 @@ export function SettingsPanel() {
   };
 
   const handleCancelSubscription = async () => {
+    if (!user) return; // Safety check
+
     setIsCanceling(true);
     try {
       const response = await fetch('/api/cancel-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stripeSubscriptionId: userData?.stripeSubscriptionId }),
+        // ▼▼▼ 【修正】APIの仕様に合わせて `userId` を送信する ▼▼▼
+        body: JSON.stringify({ userId: user.uid }),
+        // ▲▲▲ ここまで ▲▲▲
       });
+
       const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.error || 'プランの解除に失敗しました。');
+        // APIからのエラーメッセージを優先的に表示
+        throw new Error(data.message || 'プランの解除に失敗しました。');
       }
-      // No success toast here, useEffect will handle it when context updates
+      //成功時のToastはuseEffectで表示されるのでここでは不要
+
     } catch (error: any) {
       console.error('Error canceling subscription:', error);
       toast({
         variant: "destructive",
         title: "エラー",
-        description: error.message,
+        description: error.message, // APIからのエラーメッセージを表示
       });
       setIsCanceling(false);
     }
