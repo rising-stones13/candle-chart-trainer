@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 export function SettingsPanel() {
-  const { user, userData, loading, deleteAccount } = useAuth(); // `user` object contains the uid
+  const { user, userData, loading, deleteAccount } = useAuth(); 
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -70,32 +70,28 @@ export function SettingsPanel() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!user) return; // Safety check
+    if (!user) return;
 
     setIsCanceling(true);
     try {
       const response = await fetch('/api/cancel-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ▼▼▼ 【修正】APIの仕様に合わせて `userId` を送信する ▼▼▼
         body: JSON.stringify({ userId: user.uid }),
-        // ▲▲▲ ここまで ▲▲▲
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        // APIからのエラーメッセージを優先的に表示
         throw new Error(data.message || 'プランの解除に失敗しました。');
       }
-      //成功時のToastはuseEffectで表示されるのでここでは不要
 
     } catch (error: any) {
       console.error('Error canceling subscription:', error);
       toast({
         variant: "destructive",
         title: "エラー",
-        description: error.message, // APIからのエラーメッセージを表示
+        description: error.message,
       });
       setIsCanceling(false);
     }
@@ -151,7 +147,8 @@ export function SettingsPanel() {
               )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" className="w-full" disabled={isCanceling}>
+                {/* ▼▼▼ 【修正】ボタンのvariantを`destructive`に変更 ▼▼▼ */}
+                <Button variant="destructive" className="w-full" disabled={isCanceling}>
                   {isCanceling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> 解除処理中...</> : 'プレミアムプランを解除する'}
                 </Button>
               </AlertDialogTrigger>
