@@ -1,80 +1,83 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { GoogleIcon } from '@/components/icons/google-icon';
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
-export default function SignupPage() {
+export default function SignUpPage() {
+  // ▼▼▼ 【修正】AuthContextから必要な関数を取得 ▼▼▼
+  const { signUp, logInWithGoogle } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const { signUp, signUpWithGoogle } = useAuth(); // Changed signInWithGoogle to signUpWithGoogle
-  const router = useRouter();
-  const { toast } = useToast(); // Initialize toast
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ▼▼▼ 【修正】メール・パスワードでの登録処理 ▼▼▼
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setLoading(true);
     try {
       await signUp(email, password);
-      router.push('/');
-    } catch (err: any) {
-      setError(err.message);
-      toast({
-        title: '新規登録エラー',
-        description: err.message,
-        variant: 'destructive',
+      router.push('/'); // 登録成功後、ホームページにリダイレクト
+    } catch (error: any) {
+      console.error(error);
+      toast({ 
+        variant: "destructive",
+        title: "登録エラー", 
+        description: error.message || "アカウントの作成に失敗しました。"
       });
+      setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setError(null);
+  // ▼▼▼ 【修正】Googleでの登録処理 ▼▼▼
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
     try {
-      await signUpWithGoogle(); // Call the new signUpWithGoogle
-      router.push('/');
-    } catch (err: any) {
-      setError(err.message);
-      toast({
-        title: '新規登録エラー',
-        description: err.message,
-        variant: 'destructive',
+      await logInWithGoogle();
+      router.push('/'); // 成功後、ホームページにリダイレクト
+    } catch (error: any) {
+      console.error(error);
+      toast({ 
+        variant: "destructive",
+        title: "登録エラー", 
+        description: error.message || "Googleアカウントでの登録に失敗しました。"
       });
     }
+    setLoading(false);
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-sm">
+      <Card className="mx-auto max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">新規登録</CardTitle>
-          <CardDescription>
-            アカウントを作成するためにメールアドレスとパスワードを入力してください。
-          </CardDescription>
+          <CardDescription>メールアドレスとパスワードを入力してアカウントを作成します。</CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="grid gap-4">
-            {error && <p className="text-red-500">{error}</p>}
+        <CardContent>
+          <form onSubmit={handleSignUp} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">メールアドレス</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="name@example.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">パスワード</Label>
+              <div className="flex items-center">
+                <Label htmlFor="password">パスワード</Label>
+              </div>
               <Input 
                 id="password" 
                 type="password" 
@@ -83,33 +86,21 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col">
-            <Button type="submit" className="w-full">
-              新規登録
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? '登録中...' : 'アカウントを作成'}
             </Button>
-            <div className="relative w-full my-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
-                  または
-                </span>
-              </div>
-            </div>
-            <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignIn}>
-              <GoogleIcon className="mr-2 h-4 w-4" />
-              Googleで新規登録
+            {/* ▼▼▼ 【修正】Google登録ボタンのonClickイベント ▼▼▼ */}
+            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignUp} disabled={loading}>
+              Googleで登録
             </Button>
-            <p className="mt-4 text-xs text-center text-muted-foreground">
-              すでにアカウントをお持ちですか？{' '}
-              <Link href="/login" className="underline">
-                ログイン
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
+          </form>
+          <div className="mt-4 text-center text-sm">
+            すでにアカウントをお持ちですか？{" "}
+            <Link href="/login" className="underline">
+              ログイン
+            </Link>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

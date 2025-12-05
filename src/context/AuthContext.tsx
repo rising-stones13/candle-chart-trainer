@@ -1,157 +1,204 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { 
+  createContext, 
+  useContext, 
+  useEffect, 
+  useState, 
+  ReactNode 
+} from 'react';
 import { 
   onAuthStateChanged, 
   User, 
-  createUserWithEmailAndPassword, 
+  signOut, 
+  deleteUser, 
   signInWithEmailAndPassword, 
-  signOut,
-  sendPasswordResetEmail,
-  UserCredential,
-  GoogleAuthProvider,
-  signInWithPopup,
-  deleteUser
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider, 
+  signInWithPopup 
 } from 'firebase/auth';
+// ▼▼▼ 【修正】deleteDocを追加 ▼▼▼
+import { doc, onSnapshot, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 interface UserData {
-    email: string | null;
-    isPremium: boolean;
+  isPremium: boolean;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  currentPeriodEnd?: number;
 }
 
-// reSyncUserを削除
 interface AuthContextType {
   user: User | null;
   userData: UserData | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<UserCredential>;
-  logIn: (email: string, password: string) => Promise<UserCredential>;
-  logOut: () => Promise<void>;
-  sendPasswordReset: (email: string) => Promise<void>;
+  logIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   logInWithGoogle: () => Promise<void>;
-  signUpWithGoogle: () => Promise<void>;
+  logOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
+  const { toast } = useToast();
 
-  // 認証とデータ取得のロジックを1つのuseEffectに統合
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (user) {
-        // ユーザーがログインしている場合、FirestoreのonSnapshotリスナーを設定
-        const userDocRef = doc(db, 'users', user.uid);
-        const unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
-          if (docSnap.exists()) {
-            setUserData(docSnap.data() as UserData);
+    let unsubscribe: (() => void) | undefined;
+
+    const onAuthChange = onAuthStateChanged(auth, (currentUser) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = undefined;
+      }
+      setUser(currentUser);
+
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        unsubscribe = onSnapshot(userDocRef, (doc) => {
+          if (doc.exists()) {
+            setUserData(doc.data() as UserData);
           } else {
-            // ドキュメントが存在しない場合は作成
-            try {
-              await setDoc(userDocRef, { email: user.email, isPremium: false });
-            } catch (error) {
-              console.error("Failed to create user document:", error);
-            }
+            setUserData(null); 
           }
+          setLoading(false);
+        }, (error) => {
+          console.error("Error in snapshot listener:", error);
+          setUserData(null);
+          setLoading(false);
         });
-
-        if (pathname === '/login') {
-          router.push('/');
-        }
-
-        setLoading(false);
-        return () => unsubscribeSnapshot(); // クリーンアップ時にonSnapshotを解除
-
       } else {
-        // ユーザーがログアウトしている場合
-        setUser(null);
         setUserData(null);
         setLoading(false);
       }
     });
 
-    return () => unsubscribe(); // クリーンアップ時にonAuthStateChangedを解除
-  }, [pathname, router]);
+    return () => {
+      onAuthChange();
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
 
+  const signUp = async (email: string, password: string) => {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    const user = result.user;
+    const userDocRef = doc(db, 'users', user.uid);
+    await setDoc(userDocRef, {
+      email: user.email,
+      isPremium: false,
+      createdAt: new Date(),
+    });
+    toast({ 
+      title: "アカウントを作成しました",
+      description: "Candle Chart Trainerへようこそ！"
+    });
+  };
 
-  const signUp = (email: string, password: string) => {
-    return createUserWithEmailAndPassword(auth, email, password);
+  const logIn = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
   };
 
   const logInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithPopup(auth, provider);
-  };
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-  const signUpWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithPopup(auth, provider);
-  };
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-  const sendPasswordReset = (email: string) => {
-    return sendPasswordResetEmail(auth, email);
-  };
-
-  const deleteAccount = async () => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      try {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        await deleteDoc(userDocRef);
-        await deleteUser(currentUser);
-      } catch (error: any) {
-        console.error("Error deleting user account:", error);
-        if (error.code === 'auth/requires-recent-login') {
-          throw new Error("auth/requires-recent-login");
-        }
-        throw error;
+      if (!userDocSnap.exists()) {
+        await setDoc(userDocRef, {
+          email: user.email,
+          isPremium: false,
+          createdAt: new Date(),
+        });
+        toast({ 
+          title: "アカウントを作成しました",
+          description: "Candle Chart Trainerへようこそ！"
+        });
+      } else {
+        toast({ title: "ログインしました" });
       }
-    } else {
-      throw new Error("No user signed in.");
+    } catch (error: any) {
+      console.error("Google Login Error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "ログインエラー", 
+        description: "Googleアカウントでのログインに失敗しました。"
+      });
     }
   };
 
-  // reSyncUserをvalueから削除
-  const value = {
-    user,
-    userData,
-    loading,
-    signUp,
-    logIn: (email: string, password: string) => signInWithEmailAndPassword(auth, email, password),
-    logOut: () => signOut(auth),
-    sendPasswordReset,
-    logInWithGoogle,
-    signUpWithGoogle,
-    deleteAccount,
+  const logOut = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "ログアウトしました" });
+    } catch (error: any) {
+      console.error('Logout Error:', error);
+      toast({ variant: "destructive", title: "エラー", description: "ログアウトに失敗しました。" });
+    }
   };
+
+  // ▼▼▼ 【修正】アカウント削除関数 ▼▼▼
+  const deleteAccount = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      toast({ variant: "destructive", title: "エラー", description: "再ログインが必要です。" });
+      return;
+    }
+    
+    try {
+      // 1. Firestoreのユーザーデータを削除
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      await deleteDoc(userDocRef);
+      console.log(`Firestore document for user ${currentUser.uid} deleted.`);
+
+      // 2. Firebase Authenticationのユーザーを削除
+      await deleteUser(currentUser);
+      console.log(`Firebase Auth user ${currentUser.uid} deleted.`);
+
+      toast({ title: "アカウントが正常に削除されました" });
+
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      // エラーコードに応じて、より具体的なメッセージを表示することも可能
+      toast({ 
+        variant: "destructive", 
+        title: "アカウント削除エラー", 
+        description: "アカウントの削除に失敗しました。再ログインしてもう一度お試しください。"
+      });
+      throw error;
+    }
+  };
+
+  const value = { user, userData, loading, logIn, signUp, logInWithGoogle, logOut, deleteAccount };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {loading ? (
+        <div className="h-screen w-full flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 }
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
