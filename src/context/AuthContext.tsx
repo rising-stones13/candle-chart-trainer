@@ -11,7 +11,7 @@ import {
   sendPasswordResetEmail,
   UserCredential,
   GoogleAuthProvider,
-  signInWithPopup, // signInWithRedirectからsignInWithPopupに変更
+  signInWithPopup,
   deleteUser
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
@@ -22,6 +22,7 @@ interface UserData {
     isPremium: boolean;
 }
 
+// reSyncUserを削除
 interface AuthContextType {
   user: User | null;
   userData: UserData | null;
@@ -56,61 +57,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Step 1: Handle authentication state changes
+  // 認証とデータ取得のロジックを1つのuseEffectに統合
   useEffect(() => {
-    const unsubscribeFromAuth = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
-      setLoading(false);
-    });
-    return () => unsubscribeFromAuth();
-  }, []);
-
-  // Step 2: Handle data fetching, document creation, and redirection based on user state
-  useEffect(() => {
-    let unsubscribeFromUserData: (() => void) | undefined;
-
-    if (user) {
-      // Redirect away from login page if user is now logged in
-      if (pathname === '/login') {
-        router.push('/');
-      }
-      
-      const userDocRef = doc(db, 'users', user.uid);
-
-      unsubscribeFromUserData = onSnapshot(userDocRef, async (docSnap) => {
-        if (docSnap.exists()) {
-          setUserData(docSnap.data() as UserData);
-        } else {
-          console.log("User document does not exist, creating it.");
-          try {
-            await setDoc(userDocRef, { email: user.email, isPremium: false });
-          } catch (error) {
-            console.error("Failed to create user document:", error);
+      if (user) {
+        // ユーザーがログインしている場合、FirestoreのonSnapshotリスナーを設定
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
+          if (docSnap.exists()) {
+            setUserData(docSnap.data() as UserData);
+          } else {
+            // ドキュメントが存在しない場合は作成
+            try {
+              await setDoc(userDocRef, { email: user.email, isPremium: false });
+            } catch (error) {
+              console.error("Failed to create user document:", error);
+            }
           }
+        });
+
+        if (pathname === '/login') {
+          router.push('/');
         }
-      }, (error) => {
-        console.error("Firestore onSnapshot listener error:", error);
-      });
 
-      // Sync Stripe status once per login
-      user.getIdToken()
-        .then(token => fetch('/api/sync-stripe-status', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-        }))
-        .catch(e => console.error('Stripe sync fetch failed:', e));
+        setLoading(false);
+        return () => unsubscribeSnapshot(); // クリーンアップ時にonSnapshotを解除
 
-    } else {
-      // User is null, clear user data
-      setUserData(null);
-    }
-
-    return () => {
-      if (unsubscribeFromUserData) {
-        unsubscribeFromUserData();
+      } else {
+        // ユーザーがログアウトしている場合
+        setUser(null);
+        setUserData(null);
+        setLoading(false);
       }
-    };
-  }, [user, router, pathname]);
+    });
+
+    return () => unsubscribe(); // クリーンアップ時にonAuthStateChangedを解除
+  }, [pathname, router]);
+
 
   const signUp = (email: string, password: string) => {
     return createUserWithEmailAndPassword(auth, email, password);
@@ -119,13 +103,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithPopup(auth, provider); // signInWithRedirectからsignInWithPopupに変更
+    await signInWithPopup(auth, provider);
   };
 
   const signUpWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithPopup(auth, provider); // signInWithRedirectからsignInWithPopupに変更
+    await signInWithPopup(auth, provider);
   };
 
   const sendPasswordReset = (email: string) => {
@@ -151,6 +135,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // reSyncUserをvalueから削除
   const value = {
     user,
     userData,

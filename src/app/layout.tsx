@@ -1,6 +1,7 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { ChartProvider } from '@/context/ChartContext'; // Import ChartProvider
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 
@@ -23,7 +24,9 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased")}>
         <AuthProvider>
-          {children}
+          <ChartProvider> {/* Wrap with ChartProvider */}
+            {children}
+          </ChartProvider>
         </AuthProvider>
         <Toaster />
       </body>

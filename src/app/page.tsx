@@ -1,16 +1,15 @@
 'use client';
 
-import { useReducer } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useChart } from '@/context/ChartContext'; // Import the context
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/dashboard-layout';
-import ChartTradeTrainer, { reducer, initialState } from '@/components/chart-trade-trainer';
+import ChartTradeTrainer from '@/components/chart-trade-trainer';
 
 export default function Home() {
   const { user, loading } = useAuth();
-  // The state for the chart trainer is now managed here
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const { state, dispatch } = useChart(); // Use the chart context
 
   // Props for the ControlPanel, to be passed to DashboardLayout
   const controlPanelProps = {
@@ -41,9 +40,9 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {user ? (
-        // Pass the props to DashboardLayout and the state/dispatch to the trainer
+        // ChartTradeTrainer no longer needs props, it gets them from the context
         <DashboardLayout controlPanelProps={controlPanelProps}>
-          <ChartTradeTrainer state={state} dispatch={dispatch} />
+          <ChartTradeTrainer />
         </DashboardLayout>
       ) : (
         <div className="flex flex-col items-center justify-center min-h-screen">

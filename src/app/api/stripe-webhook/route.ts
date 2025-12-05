@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
     }
 
     stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-06-20',
+      // ▼▼▼ APIバージョンを整合性のあるものに修正 ▼▼▼
+      apiVersion: '2023-10-16',
+      // ▲▲▲ ここまで ▲▲▲
     });
 
     const payload = await req.text();
@@ -30,6 +32,7 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
+        // 以前の正常な実装通り、metadataからuserIdを取得
         const userId = session.metadata?.userId;
         const customerId = session.customer;
         const subscriptionIdFromSession = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
@@ -54,34 +57,30 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // ▼▼▼ 【復活】欠落していたキャンセル処理 ▼▼▼
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
-        // Stripeの顧客IDをもとにユーザーを検索
         const usersRef = db.collection('users');
         const snapshot = await usersRef.where('stripeCustomerId', '==', customerId).limit(1).get();
 
         if (snapshot.empty) {
           console.error(`No user found with Stripe customer ID: ${customerId}`);
-          break; // ユーザーが見つからなくてもエラーにせず、次の処理に進む
+          break;
         }
 
         const userDoc = snapshot.docs[0];
         console.log(`Attempting to revoke premium access for user ${userDoc.id}...`);
 
-        // ユーザーのステータスをフリープランに更新
         await userDoc.ref.update({
           isPremium: false,
-          stripeSubscriptionId: null, // サブスクリプションIDをクリア
-          currentPeriodEnd: null,     // 契約期間終了日をクリア
+          stripeSubscriptionId: null,
+          currentPeriodEnd: null,
         });
 
         console.log(`Successfully revoked premium access for user ${userDoc.id}`);
         break;
       }
-      // ▲▲▲ ここまで ▲▲▲
     }
 
     return NextResponse.json({ received: true });

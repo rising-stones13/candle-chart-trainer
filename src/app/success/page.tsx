@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
@@ -9,18 +9,15 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function SuccessPage() {
   const router = useRouter();
+  // reSyncUserを削除し、シンプルに
   const { userData, loading: authLoading } = useAuth();
   const [message, setMessage] = useState('決済情報を確認しています...');
 
-  // This effect runs when userData or authLoading changes.
+  // isPremiumがtrueになったらリダイレクトするロジック（変更なし）
   useEffect(() => {
-    // We wait until the initial auth loading is complete.
     if (!authLoading) {
-      // If the user's premium status is already true, it means the webhook
-      // has been processed. We can then redirect to home.
       if (userData?.isPremium) {
         setMessage('ありがとうございます！ホーム画面に移動します...');
-        // Redirect to home page after a short delay to show the message.
         const redirectTimeout = setTimeout(() => {
           router.push('/');
         }, 2000);
@@ -29,15 +26,13 @@ export default function SuccessPage() {
     }
   }, [userData, authLoading, router]);
 
-  // This effect sets a timeout as a fallback. If the webhook processing is delayed,
-  // it provides the user with further instructions.
+  // フォールバック用のタイムアウト処理のみ残す
   useEffect(() => {
     const fallbackTimeout = setTimeout(() => {
-      // This message will be displayed if the premium status is not updated within 30 seconds.
+      // onSnapshotが機能しない場合に備えたフォールバックメッセージ
       setMessage('処理に時間がかかっています。お手数ですが、一度ホームに戻り、再ログインをお試しください。');
     }, 30000); // 30 seconds
 
-    // Cleanup the timeout if the component unmounts or if the redirect happens.
     return () => clearTimeout(fallbackTimeout);
   }, []);
 
