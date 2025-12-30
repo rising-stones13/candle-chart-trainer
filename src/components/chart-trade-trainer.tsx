@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useChart } from '@/context/ChartContext'; // Import the new context
 import { generateWeeklyData, parseStockData, calculateRSI, calculateMACD } from '@/lib/data-helpers';
 import { StockChart, WeeklyChart } from './stock-chart';
+import { DraggableWindow } from './draggable-window';
 import { TradePanel } from './trade-panel';
 import { LineChart, Loader2, FolderOpen, AreaChart } from 'lucide-react';
 import { Button } from './ui/button';
@@ -151,18 +152,38 @@ export default function ChartTradeTrainer() {
                   </div>
                 </div>
                 {state.showWeeklyChart && (
-                  <div className="h-[30%] border-t-2 border-gray-500 relative">
-                    <div className="absolute inset-0">
-                      <WeeklyChart
-                        key={`${state.chartTitle}-weekly`}
-                        data={state.weeklyData}
-                        upColor={state.upColor}
-                        downColor={state.downColor}
-                        maConfigs={state.maConfigs}
-                        isPremium={!!userData?.isPremium}
-                      />
+                  <>
+                    <div className="h-[30%] border-t-2 border-gray-500 relative">
+                      <div className="absolute inset-0">
+                        <WeeklyChart
+                          key={`${state.chartTitle}-weekly-bottom`}
+                          data={state.weeklyData}
+                          upColor={state.upColor}
+                          downColor={state.downColor}
+                          maConfigs={state.maConfigs}
+                          isPremium={!!userData?.isPremium}
+                        />
+                      </div>
                     </div>
-                  </div>
+                    <DraggableWindow 
+                      title="週足チャート (フローティング)" 
+                      isOpen={state.showWeeklyChart} 
+                      onClose={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
+                    >
+                      {(size) => (
+                        <div style={{ width: size.width, height: size.height }}>
+                          <WeeklyChart
+                            key={`${state.chartTitle}-weekly-floating`}
+                            data={state.weeklyData}
+                            upColor={state.upColor}
+                            downColor={state.downColor}
+                            maConfigs={state.maConfigs}
+                            isPremium={!!userData?.isPremium}
+                          />
+                        </div>
+                      )}
+                    </DraggableWindow>
+                  </>
                 )}
               </>
             ) : (
