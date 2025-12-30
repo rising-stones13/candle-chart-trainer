@@ -96,16 +96,16 @@ export function generateWeeklyData(dailyData: CandleData[]): CandleData[] {
     const weeklyDataMap = new Map<string, CandleData>();
 
     for (const day of dailyData) {
-        const date = new Date(typeof day.time === 'number' ? day.time * 1000 : day.time as string);
-        const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
-        const dayOfWeek = adjustedDate.getUTCDay();
-        const weekStartDate = new Date(adjustedDate);
-        weekStartDate.setUTCDate(adjustedDate.getUTCDate() - dayOfWeek);
+        const date = new Date((day.time as number) * 1000);
+        const dayOfWeek = date.getUTCDay();
+        const weekStartDate = new Date(date.getTime());
+        weekStartDate.setUTCDate(date.getUTCDate() - dayOfWeek);
+        weekStartDate.setUTCHours(0, 0, 0, 0);
         const weekStartString = weekStartDate.toISOString().split('T')[0];
 
         if (!weeklyDataMap.has(weekStartString)) {
             weeklyDataMap.set(weekStartString, {
-                time: weekStartString as Time, // Use week start date for weekly chart
+                time: (weekStartDate.getTime() / 1000) as Time, // Use week start date for weekly chart
                 open: day.open,
                 high: day.high,
                 low: day.low,
@@ -121,7 +121,7 @@ export function generateWeeklyData(dailyData: CandleData[]): CandleData[] {
         }
     }
 
-    return Array.from(weeklyDataMap.values()).sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime());
+    return Array.from(weeklyDataMap.values()).sort((a, b) => (a.time as number) - (b.time as number));
 }
 
 export function calculateMA(data: CandleData[], period: number): LineData[] {

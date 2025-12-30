@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useChart } from '@/context/ChartContext'; // Import the new context
 import { generateWeeklyData, parseStockData, calculateRSI, calculateMACD } from '@/lib/data-helpers';
-import { StockChart } from './stock-chart';
+import { StockChart, WeeklyChart } from './stock-chart';
 import { TradePanel } from './trade-panel';
 import { LineChart, Loader2, FolderOpen, AreaChart } from 'lucide-react';
 import { Button } from './ui/button';
@@ -126,33 +126,48 @@ export default function ChartTradeTrainer() {
                 </Button>
             </div>
         </header>
-        <main className="relative flex-1 min-w-0 min-h-0 bg-background">
-            <div className="absolute inset-0">
-                {isLoading ? (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground"><Loader2 className="w-16 h-16 mb-4 animate-spin" /><p>データを読み込んでいます...</p></div>
-                ) : state.fileLoaded ? (
-                  <StockChart
-                    key={`${state.chartTitle}-${state.upColor}-${state.downColor}`}
-                    chartData={displayedChartData}
-                    weeklyData={state.weeklyData}
-                    positions={allEntries}
-                    tradeHistory={state.tradeHistory}
-                    maConfigs={state.maConfigs}
-                    rsiData={rsiData}
-                    macdData={macdData}
-                    showWeeklyChart={state.showWeeklyChart}
-                    onCloseWeeklyChart={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
-                    replayIndex={state.replayIndex}
-                    upColor={state.upColor}
-                    downColor={state.downColor}
-                    volumeConfig={state.volumeConfig}
-                    isPremium={!!userData?.isPremium}
-                    chartTitle={state.chartTitle}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground"><LineChart className="w-24 h-24 mb-4" /><h2 className="text-2xl font-semibold">ChartTrade Trainer</h2><p>「ファイルを開く」から株価データ(JSON)を読み込みます。</p></div>
+        <main className="flex-1 min-w-0 min-h-0 bg-background flex flex-col">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground"><Loader2 className="w-16 h-16 mb-4 animate-spin" /><p>データを読み込んでいます...</p></div>
+            ) : state.fileLoaded ? (
+              <>
+                <div className="flex-1 relative">
+                  <div className="absolute inset-0">
+                    <StockChart
+                      key={`${state.chartTitle}-${state.upColor}-${state.downColor}-daily`}
+                      chartData={displayedChartData}
+                      positions={allEntries}
+                      tradeHistory={state.tradeHistory}
+                      maConfigs={state.maConfigs}
+                      rsiData={rsiData}
+                      macdData={macdData}
+                      replayIndex={state.replayIndex}
+                      upColor={state.upColor}
+                      downColor={state.downColor}
+                      volumeConfig={state.volumeConfig}
+                      isPremium={!!userData?.isPremium}
+                      chartTitle={state.chartTitle}
+                    />
+                  </div>
+                </div>
+                {state.showWeeklyChart && (
+                  <div className="h-[30%] border-t-2 border-gray-500 relative">
+                    <div className="absolute inset-0">
+                      <WeeklyChart
+                        key={`${state.chartTitle}-weekly`}
+                        data={state.weeklyData}
+                        upColor={state.upColor}
+                        downColor={state.downColor}
+                        maConfigs={state.maConfigs}
+                        isPremium={!!userData?.isPremium}
+                      />
+                    </div>
+                  </div>
                 )}
-            </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground"><LineChart className="w-24 h-24 mb-4" /><h2 className="text-2xl font-semibold">ChartTrade Trainer</h2><p>「ファイルを開く」から株価データ(JSON)を読み込みます。</p></div>
+            )}
         </main>
       </div>
 

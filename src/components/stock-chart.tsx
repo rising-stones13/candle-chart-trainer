@@ -12,29 +12,11 @@ import {
   LineStyle, 
   ColorType,
   PriceScaleMode,
-  Time
+  Time,
+  SeriesMarker
 } from 'lightweight-charts';
 import { calculateMA } from '@/lib/data-helpers';
 import type { CandleData, Trade, MAConfig, MacdData, LineData, PositionEntry, VolumeConfig } from '@/types';
-import { DraggableWindow } from './draggable-window';
-
-interface StockChartProps {
-  chartData: CandleData[];
-  weeklyData: CandleData[];
-  positions: (PositionEntry & { type: 'long' | 'short' })[];
-  tradeHistory: Trade[];
-  replayIndex: number | null;
-  maConfigs: Record<string, MAConfig>;
-  rsiData: LineData[];
-  macdData: MacdData[];
-  showWeeklyChart: boolean;
-  onCloseWeeklyChart: () => void;
-  upColor: string;
-  downColor: string;
-  volumeConfig: VolumeConfig;
-  isPremium: boolean;
-  chartTitle: string;
-}
 
 const getChartOptions = (upColor: string, downColor:string, title: string) => ({
   layout: {
@@ -42,7 +24,6 @@ const getChartOptions = (upColor: string, downColor:string, title: string) => ({
     textColor: 'rgba(230, 230, 230, 0.9)',
     fontSize: 12,
     fontFamily: 'Inter, sans-serif',
-    attributionLogo: false,
   },
   watermark: {
     visible: true,
@@ -77,47 +58,16 @@ const getChartOptions = (upColor: string, downColor:string, title: string) => ({
   },
   rightPriceScale: { 
     borderColor: '#3a3e4a',
-    autoScale: true,
-    scaleMargins: {
-        top: 0.2,
-        bottom: 0.2,
-    },
-    mode: PriceScaleMode.Normal,
-    invertScale: false,
-    alignLabels: true,
-    borderVisible: true,
-    visible: true,
-    ticksVisible: true,
-    entireTextOnly: false,
-    minimumWidth: 0,
   },
   timeScale: { 
     borderColor: '#3a3e4a', 
     timeVisible: true, 
     secondsVisible: false,
-    rightOffset: 12,
-    barSpacing: 10,
-    minBarSpacing: 5,
-    fixLeftEdge: true,
-    fixRightEdge: true,
-    lockVisibleTimeRangeOnResize: false,
-    rightBarStaysOnScroll: false,
-    borderVisible: true,
-    visible: true,
-    ticksVisible: true,
-    shiftVisibleRangeOnNewBar: true,
-    allowShiftVisibleRangeOnWhitespaceReplacement: false,
-    uniformDistribution: false,
-    minimumHeight: 0,
-    allowBoldLabels: false,
   },
   localization: {
     locale: 'en-US',
     dateFormat: 'yyyy-MM-dd',
   },
-  handleScroll: true,
-  handleScale: true,
-  autoSize: false,
 });
 
 const getCandleSeriesOptions = (upColor: string, downColor: string) => ({
@@ -129,87 +79,97 @@ const getCandleSeriesOptions = (upColor: string, downColor: string) => ({
   wickUpColor: upColor,
 });
 
-interface WeeklyChartProps {
+export interface WeeklyChartProps {
   data: CandleData[];
   upColor: string;
   downColor: string;
-  size: { width: number; height: number };
   maConfigs: Record<string, MAConfig>;
   isPremium: boolean;
 }
 
-function WeeklyChart({ data, upColor, downColor, size, maConfigs, isPremium }: WeeklyChartProps) {
+export function WeeklyChart({ data, upColor, downColor, maConfigs, isPremium }: WeeklyChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<Record<string, ISeriesApi<any>>>({});
+  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const maSeriesRef = useRef<Record<string, ISeriesApi<any>>>({});
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
     const chartOptions = {
       ...getChartOptions(upColor, downColor, '週足チャート'),
-      width: size.width,
-      height: size.height,
-      timeScale: {
-        timeVisible: false,
-      },
     };
     const chart = createChart(chartContainerRef.current, chartOptions as TimeChartOptions);
     chartRef.current = chart;
     
-    const candleSeries = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
-    candleSeries.setData(data);
-    seriesRef.current.candle = candleSeries;
+    candleSeriesRef.current = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
 
     Object.values(maConfigs).forEach(config => {
-      const series = chart.addLineSeries({ 
+      maSeriesRef.current[`ma${config.period}`] = chart.addLineSeries({ 
         color: config.color, 
         lineWidth: 2, 
         lastValueVisible: false, 
         priceLineVisible: false 
       });
-      seriesRef.current[`ma${config.period}`] = series;
     });
     
+    const resizeObserver = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      chart.applyOptions({ width, height });
+    });
+
+    resizeObserver.observe(chartContainerRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, upColor, downColor]);
-  
-  useEffect(() => {
-    if (!chartRef.current) return;
-    chartRef.current.applyOptions({ width: size.width, height: size.height });
-  }, [size]);
+  }, []);
 
   useEffect(() => {
-    if (!chartRef.current || data.length === 0) return;
+    if (!chartRef.current || !candleSeriesRef.current) return;
+    
+    candleSeriesRef.current.applyOptions(getCandleSeriesOptions(upColor, downColor));
+    candleSeriesRef.current.setData(data);
 
     Object.values(maConfigs).forEach(config => {
-      const series = seriesRef.current[`ma${config.period}`];
+      const series = maSeriesRef.current[`ma${config.period}`];
       if (series) {
         const maData = calculateMA(data, config.period);
         series.setData(maData);
         series.applyOptions({ visible: isPremium && config.visible });
       }
     });
-  }, [data, maConfigs, isPremium]);
+  }, [data, upColor, downColor, maConfigs, isPremium]);
 
   return <div ref={chartContainerRef} className="w-full h-full" />;
 }
 
+export interface StockChartProps {
+  chartData: CandleData[];
+  positions: (PositionEntry & { type: 'long' | 'short' })[];
+  tradeHistory: Trade[];
+  replayIndex: number | null;
+  maConfigs: Record<string, MAConfig>;
+  rsiData: LineData[];
+  macdData: MacdData[];
+  upColor: string;
+  downColor: string;
+  volumeConfig: VolumeConfig;
+  isPremium: boolean;
+  chartTitle: string;
+}
+
 export function StockChart({
   chartData,
-  weeklyData,
   positions,
   tradeHistory,
   replayIndex,
   maConfigs,
   rsiData,
   macdData,
-  showWeeklyChart,
-  onCloseWeeklyChart,
   upColor,
   downColor,
   volumeConfig,
@@ -347,20 +307,6 @@ export function StockChart({
   }, [positions, tradeHistory, upColor, downColor]);
 
   return (
-    <div className="w-full h-full relative">
-      <div ref={chartContainerRef} className="w-full h-full" />
-      {showWeeklyChart && (
-        <DraggableWindow title="週足チャート" isOpen={showWeeklyChart} onClose={onCloseWeeklyChart}>
-          {(size) => <WeeklyChart 
-            data={weeklyData} 
-            upColor={upColor} 
-            downColor={downColor} 
-            size={size} 
-            maConfigs={maConfigs} 
-            isPremium={isPremium} 
-          />}
-        </DraggableWindow>
-      )}
-    </div>
+    <div ref={chartContainerRef} className="w-full h-full" />
   );
 }
