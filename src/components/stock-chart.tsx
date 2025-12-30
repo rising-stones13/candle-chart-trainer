@@ -1,0 +1,363 @@
+'use client';
+
+import React, { useEffect, useRef } from 'react';
+import { 
+  createChart, 
+  IChartApi, 
+  ISeriesApi, 
+  CrosshairMode, 
+  TimeChartOptions,
+  LineData as LWCLineData, 
+  HistogramData, 
+  LineStyle, 
+  ColorType,
+  PriceScaleMode,
+  Time
+} from 'lightweight-charts';
+import { calculateMA } from '@/lib/data-helpers';
+import type { CandleData, Trade, MAConfig, MacdData, LineData, PositionEntry, VolumeConfig } from '@/types';
+import { DraggableWindow } from './draggable-window';
+
+interface StockChartProps {
+  chartData: CandleData[];
+  weeklyData: CandleData[];
+  positions: (PositionEntry & { type: 'long' | 'short' })[];
+  tradeHistory: Trade[];
+  replayIndex: number | null;
+  maConfigs: Record<string, MAConfig>;
+  rsiData: LineData[];
+  macdData: MacdData[];
+  showWeeklyChart: boolean;
+  onCloseWeeklyChart: () => void;
+  upColor: string;
+  downColor: string;
+  volumeConfig: VolumeConfig;
+  isPremium: boolean;
+  chartTitle: string;
+}
+
+const getChartOptions = (upColor: string, downColor:string, title: string) => ({
+  layout: {
+    background: { type: ColorType.Solid, color: '#15191E' },
+    textColor: 'rgba(230, 230, 230, 0.9)',
+    fontSize: 12,
+    fontFamily: 'Inter, sans-serif',
+    attributionLogo: false,
+  },
+  watermark: {
+    visible: true,
+    fontSize: 16,
+    horzAlign: 'left',
+    vertAlign: 'top',
+    color: 'rgba(255, 255, 255, 0.5)',
+    text: title,
+  },
+  grid: {
+    vertLines: { color: '#2a2e39', style: LineStyle.Solid, visible: true },
+    horzLines: { color: '#2a2e39', style: LineStyle.Solid, visible: true },
+  },
+  crosshair: { 
+    mode: CrosshairMode.Magnet,
+    vertLine: {
+      width: 1,
+      style: LineStyle.Dashed,
+      visible: true,
+      labelVisible: true,
+      color: '#D1D4DC',
+      labelBackgroundColor: '#4C525E'
+    },
+    horzLine: {
+      width: 1,
+      style: LineStyle.Dashed,
+      visible: true,
+      labelVisible: true,
+      color: '#D1D4DC',
+      labelBackgroundColor: '#4C525E'
+    },
+  },
+  rightPriceScale: { 
+    borderColor: '#3a3e4a',
+    autoScale: true,
+    scaleMargins: {
+        top: 0.2,
+        bottom: 0.2,
+    },
+    mode: PriceScaleMode.Normal,
+    invertScale: false,
+    alignLabels: true,
+    borderVisible: true,
+    visible: true,
+    ticksVisible: true,
+    entireTextOnly: false,
+    minimumWidth: 0,
+  },
+  timeScale: { 
+    borderColor: '#3a3e4a', 
+    timeVisible: true, 
+    secondsVisible: false,
+    rightOffset: 12,
+    barSpacing: 10,
+    minBarSpacing: 5,
+    fixLeftEdge: true,
+    fixRightEdge: true,
+    lockVisibleTimeRangeOnResize: false,
+    rightBarStaysOnScroll: false,
+    borderVisible: true,
+    visible: true,
+    ticksVisible: true,
+    shiftVisibleRangeOnNewBar: true,
+    allowShiftVisibleRangeOnWhitespaceReplacement: false,
+    uniformDistribution: false,
+    minimumHeight: 0,
+    allowBoldLabels: false,
+  },
+  localization: {
+    locale: 'en-US',
+    dateFormat: 'yyyy-MM-dd',
+  },
+  handleScroll: true,
+  handleScale: true,
+  autoSize: false,
+});
+
+const getCandleSeriesOptions = (upColor: string, downColor: string) => ({
+  upColor: upColor,
+  downColor: downColor,
+  borderDownColor: downColor,
+  borderUpColor: upColor,
+  wickDownColor: downColor,
+  wickUpColor: upColor,
+});
+
+interface WeeklyChartProps {
+  data: CandleData[];
+  upColor: string;
+  downColor: string;
+  size: { width: number; height: number };
+  maConfigs: Record<string, MAConfig>;
+  isPremium: boolean;
+}
+
+function WeeklyChart({ data, upColor, downColor, size, maConfigs, isPremium }: WeeklyChartProps) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<Record<string, ISeriesApi<any>>>({});
+
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    const chartOptions = {
+      ...getChartOptions(upColor, downColor, '週足チャート'),
+      width: size.width,
+      height: size.height,
+    };
+    const chart = createChart(chartContainerRef.current, chartOptions as TimeChartOptions);
+    chartRef.current = chart;
+    
+    const candleSeries = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
+    candleSeries.setData(data);
+    seriesRef.current.candle = candleSeries;
+
+    Object.values(maConfigs).forEach(config => {
+      const series = chart.addLineSeries({ 
+        color: config.color, 
+        lineWidth: 2, 
+        lastValueVisible: false, 
+        priceLineVisible: false 
+      });
+      seriesRef.current[`ma${config.period}`] = series;
+    });
+    
+    return () => {
+      chart.remove();
+      chartRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, upColor, downColor]);
+  
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({ width: size.width, height: size.height });
+  }, [size]);
+
+  useEffect(() => {
+    if (!chartRef.current || data.length === 0) return;
+
+    Object.values(maConfigs).forEach(config => {
+      const series = seriesRef.current[`ma${config.period}`];
+      if (series) {
+        const maData = calculateMA(data, config.period);
+        series.setData(maData);
+        series.applyOptions({ visible: isPremium && config.visible });
+      }
+    });
+  }, [data, maConfigs, isPremium]);
+
+  return <div ref={chartContainerRef} className="w-full h-full" />;
+}
+
+export function StockChart({
+  chartData,
+  weeklyData,
+  positions,
+  tradeHistory,
+  replayIndex,
+  maConfigs,
+  rsiData,
+  macdData,
+  showWeeklyChart,
+  onCloseWeeklyChart,
+  upColor,
+  downColor,
+  volumeConfig,
+  isPremium,
+  chartTitle,
+}: StockChartProps) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<Record<string, ISeriesApi<any>>>({});
+  
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+    
+    const chart = createChart(chartContainerRef.current, {
+      ...getChartOptions(upColor, downColor, chartTitle),
+    } as TimeChartOptions);
+    chartRef.current = chart;
+    
+    // --- Series Creation ---
+    seriesRef.current.candle = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
+    seriesRef.current.volume = chart.addHistogramSeries({
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'volume',
+      priceLineVisible: false,
+    });
+    chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    Object.values(maConfigs).forEach(config => {
+        const period = config.period.toString();
+        seriesRef.current[`ma${period}`] = chart.addLineSeries({ color: config.color, lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+    });
+    seriesRef.current.rsi = chart.addLineSeries({ priceScaleId: 'rsi', color: '#FFC107', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+    chart.priceScale('rsi').applyOptions({ scaleMargins: { top: 0.9, bottom: 0 } });
+    seriesRef.current.macdLine = chart.addLineSeries({ priceScaleId: 'macd', color: '#2196F3', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+    seriesRef.current.macdSignal = chart.addLineSeries({ priceScaleId: 'macd', color: '#FF5252', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+    seriesRef.current.macdHistogram = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
+    chart.priceScale('macd').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+    
+    const resizeObserver = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      chart.applyOptions({ width, height });
+    });
+
+    resizeObserver.observe(chartContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      chart.remove();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current.candle) return;
+    
+    seriesRef.current.candle.applyOptions(getCandleSeriesOptions(upColor, downColor));
+
+    const currentData = replayIndex === null ? chartData : chartData.slice(0, replayIndex + 1);
+
+    seriesRef.current.candle.setData(currentData);
+    const volumeData = currentData.map(d => ({ time: d.time, value: d.volume, color: d.close >= d.open ? 'rgba(8, 153, 129, 0.5)' : 'rgba(239, 83, 80, 0.5)' }));
+    seriesRef.current.volume.setData(volumeData as HistogramData[]);
+
+    if (seriesRef.current.volume && chartRef.current) {
+      seriesRef.current.volume.applyOptions({ visible: volumeConfig.visible });
+      chartRef.current.priceScale('volume').applyOptions({ visible: volumeConfig.visible });
+    }
+
+    Object.values(maConfigs).forEach(config => {
+        const period = config.period.toString();
+        const series = seriesRef.current[`ma${period}`];
+        if (series) {
+            const maData = calculateMA(currentData, config.period);
+            series.setData(maData);
+            series.applyOptions({ visible: isPremium && config.visible });
+        }
+    });
+
+    if (seriesRef.current.rsi) {
+        const rsiSlice = rsiData.slice(0, currentData.length);
+        seriesRef.current.rsi.setData(rsiSlice);
+        chartRef.current.priceScale('rsi').applyOptions({ visible: rsiData.length > 0 });
+    }
+    
+    if (seriesRef.current.macdLine && seriesRef.current.macdSignal && seriesRef.current.macdHistogram) {
+        const macdSlice = macdData.slice(0, currentData.length);
+        const macdLine = macdSlice.map(d => ({ time: d.time, value: d.macd })).filter(d => d.value !== undefined);
+        const signalLine = macdSlice.map(d => ({ time: d.time, value: d.signal })).filter(d => d.value !== undefined);
+        const histogramData = macdSlice.map(d => ({ time: d.time, value: d.histogram, color: d.histogram && d.histogram > 0 ? upColor : downColor })).filter(d => d.value !== undefined);
+
+        seriesRef.current.macdLine.setData(macdLine as LWCLineData[]);
+        seriesRef.current.macdSignal.setData(signalLine as LWCLineData[]);
+        seriesRef.current.macdHistogram.setData(histogramData as HistogramData[]);
+
+        const isVisible = macdData.length > 0;
+        chartRef.current.priceScale('macd').applyOptions({ visible: isVisible });
+    }
+
+  }, [chartData, replayIndex, maConfigs, rsiData, macdData, upColor, downColor, volumeConfig, isPremium]);
+  
+  useEffect(() => {
+    if (!chartRef.current) return;
+    
+    if (replayIndex !== null) {
+        const dataLength = chartData.length;
+        const to = dataLength > 0 ? dataLength - 1 : 0;
+        chartRef.current.timeScale().scrollToPosition(to, false);
+    }
+  }, [replayIndex, chartData.length]);
+
+  useEffect(() => {
+    if (!seriesRef.current.candle) return;
+    
+    const tradeMarkers = tradeHistory.flatMap(trade => [
+        { time: trade.entryDate, position: 'belowBar' as const, color: '#2196F3', shape: 'arrowUp' as const, text: `E` },
+        { time: trade.exitDate, position: 'aboveBar' as const, color: trade.profit > 0 ? '#4CAF50' : '#F44336', shape: 'arrowDown' as const, text: `X` },
+    ]);
+    
+    const positionMarkers = positions.map(p => ({ 
+        time: p.date, 
+        position: (p.type === 'long' ? 'belowBar' : 'aboveBar'), 
+        color: p.type === 'long' ? '#2196F3' : '#F44336', 
+        shape: 'circle' as const, 
+        text: `${p.type.charAt(0).toUpperCase()}` 
+    }));
+
+    const allMarkers: SeriesMarker<Time>[] = [...tradeMarkers, ...positionMarkers];
+    const sortedMarkers = allMarkers.sort((a, b) => {
+        const timeA = typeof a.time === 'string' ? new Date(a.time).getTime() / 1000 : a.time as number;
+        const timeB = typeof b.time === 'string' ? new Date(b.time).getTime() / 1000 : b.time as number;
+        return timeA - timeB;
+    });
+    
+    seriesRef.current.candle.setMarkers(sortedMarkers);
+    
+  }, [positions, tradeHistory, upColor, downColor]);
+
+  return (
+    <div className="w-full h-full relative">
+      <div ref={chartContainerRef} className="w-full h-full" />
+      {showWeeklyChart && (
+        <DraggableWindow title="週足チャート" isOpen={showWeeklyChart} onClose={onCloseWeeklyChart}>
+          {(size) => <WeeklyChart 
+            data={weeklyData} 
+            upColor={upColor} 
+            downColor={downColor} 
+            size={size} 
+            maConfigs={maConfigs} 
+            isPremium={isPremium} 
+          />}
+        </DraggableWindow>
+      )}
+    </div>
+  );
+}
