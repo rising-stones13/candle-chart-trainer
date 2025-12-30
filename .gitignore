@@ -40,3 +40,6 @@ next-env.d.ts
 # firebase
 .firebase/
 
+# editor
+.vscode/
+
