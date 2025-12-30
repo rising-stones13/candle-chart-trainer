@@ -150,6 +150,9 @@ function WeeklyChart({ data, upColor, downColor, size, maConfigs, isPremium }: W
       ...getChartOptions(upColor, downColor, '週足チャート'),
       width: size.width,
       height: size.height,
+      timeScale: {
+        timeVisible: false,
+      },
     };
     const chart = createChart(chartContainerRef.current, chartOptions as TimeChartOptions);
     chartRef.current = chart;
