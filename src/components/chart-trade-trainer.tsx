@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useChart } from '@/context/ChartContext'; // Import the new context
 import { generateWeeklyData, parseStockData, calculateRSI, calculateMACD } from '@/lib/data-helpers';
 import { StockChart, WeeklyChart } from './stock-chart';
-import { DraggableWindow } from './draggable-window';
+import { FloatingWindow } from './floating-window';
 import { TradePanel } from './trade-panel';
 import { LineChart, Loader2, FolderOpen, AreaChart } from 'lucide-react';
 import { Button } from './ui/button';
@@ -20,6 +20,11 @@ export default function ChartTradeTrainer() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [chartKey, setChartKey] = useState(0);
+
+  const handleInteractionEnd = () => {
+    setChartKey(prevKey => prevKey + 1);
+  };
 
   useEffect(() => {
     if (userData && !userData.isPremium) {
@@ -36,6 +41,15 @@ export default function ChartTradeTrainer() {
       const fileContent = await file.text();
       const { data, meta } = parseStockData(fileContent);
       const title = meta.longName ? `${meta.longName} (${meta.symbol})` : file.name;
+      
+      const weeklyData = generateWeeklyData(data);
+      if (data[0]) {
+        console.log('Daily data[0].time:', data[0].time, 'Type:', typeof data[0].time);
+      }
+      if (weeklyData[0]) {
+        console.log('Weekly data[0].time:', weeklyData[0].time, 'Type:', typeof weeklyData[0].time);
+      }
+
       dispatch({ type: 'SET_CHART_DATA', payload: { data, title } });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'ファイルの処理中にエラーが発生しました。';
@@ -165,24 +179,23 @@ export default function ChartTradeTrainer() {
                         />
                       </div>
                     </div>
-                    <DraggableWindow 
+                    <FloatingWindow 
                       title="週足チャート (フローティング)" 
                       isOpen={state.showWeeklyChart} 
                       onClose={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
+                      onInteractionEnd={handleInteractionEnd}
                     >
                       {(size) => (
-                        <div style={{ width: size.width, height: size.height }}>
-                          <WeeklyChart
-                            key={`${state.chartTitle}-weekly-floating`}
-                            data={state.weeklyData}
-                            upColor={state.upColor}
-                            downColor={state.downColor}
-                            maConfigs={state.maConfigs}
-                            isPremium={!!userData?.isPremium}
-                          />
-                        </div>
+                        <WeeklyChart
+                          key={`${state.chartTitle}-weekly-floating-${chartKey}`}
+                          data={state.weeklyData}
+                          upColor={state.upColor}
+                          downColor={state.downColor}
+                          maConfigs={state.maConfigs}
+                          isPremium={!!userData?.isPremium}
+                        />
                       )}
-                    </DraggableWindow>
+                    </FloatingWindow>
                   </>
                 )}
               </>

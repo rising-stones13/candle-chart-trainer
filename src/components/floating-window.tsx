@@ -7,11 +7,12 @@ import { XIcon, GripVerticalIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
-interface DraggableWindowProps {
+interface FloatingWindowProps {
   children: (size: { width: number; height: number }) => ReactNode;
   title: string;
   isOpen: boolean;
   onClose: () => void;
+  onInteractionEnd?: () => void;
   initialPosition?: { x: number; y: number };
   className?: string;
 }
@@ -20,11 +21,12 @@ const defaultInitialPosition = { x: 80, y: 120 };
 const defaultInitialSize = { width: 600, height: 400 };
 const minSize = { width: 300, height: 200 };
 
-export function DraggableWindow({
+export function FloatingWindow({
   children,
   title,
   isOpen,
   onClose,
+  onInteractionEnd,
   initialPosition = defaultInitialPosition,
   className,
 }: DraggableWindowProps) {
@@ -38,12 +40,25 @@ export function DraggableWindow({
   const [size, setSize] = useState(getInitialSize);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   const windowRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0, width: 0, height: 0, mouseX: 0, mouseY: 0 });
 
+  useEffect(() => {
+    if (!isOpen) {
+      setIsReady(false);
+      return;
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsReady(true);
+      });
+    });
+  }, [isOpen, size.width, size.height]);
+  
   useEffect(() => {
     if (isMobile) {
       setPosition({ x: 16, y: 120 });
@@ -88,6 +103,7 @@ export function DraggableWindow({
   const handleDragEnd = () => {
     setIsDragging(false);
     document.body.style.userSelect = '';
+    onInteractionEnd?.();
   };
   
   // --- Resizing Logic ---
@@ -127,6 +143,7 @@ export function DraggableWindow({
   const handleResizeEnd = () => {
     setIsResizing(false);
     document.body.style.userSelect = '';
+    onInteractionEnd?.();
   };
 
   // --- Event Listener Registration ---
@@ -214,7 +231,7 @@ export function DraggableWindow({
           </Button>
         </CardHeader>
         <CardContent className="p-0 flex-1">
-          {children(size)}
+          {isReady && children(size)}
         </CardContent>
         <div
           ref={resizeHandleRef}

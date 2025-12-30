@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   createChart, 
   IChartApi, 
@@ -18,7 +18,7 @@ import {
 import { calculateMA } from '@/lib/data-helpers';
 import type { CandleData, Trade, MAConfig, MacdData, LineData, PositionEntry, VolumeConfig } from '@/types';
 
-const getChartOptions = (upColor: string, downColor:string, title: string) => ({
+const getChartOptions = (upColor: string, downColor: string, title: string) => ({
   layout: {
     background: { type: ColorType.Solid, color: '#15191E' },
     textColor: 'rgba(230, 230, 230, 0.9)',
@@ -39,34 +39,25 @@ const getChartOptions = (upColor: string, downColor:string, title: string) => ({
   },
   crosshair: { 
     mode: CrosshairMode.Magnet,
-    vertLine: {
-      width: 1,
-      style: LineStyle.Dashed,
-      visible: true,
-      labelVisible: true,
-      color: '#D1D4DC',
-      labelBackgroundColor: '#4C525E'
-    },
-    horzLine: {
-      width: 1,
-      style: LineStyle.Dashed,
-      visible: true,
-      labelVisible: true,
-      color: '#D1D4DC',
-      labelBackgroundColor: '#4C525E'
-    },
   },
   rightPriceScale: { 
     borderColor: '#3a3e4a',
   },
   timeScale: { 
-    borderColor: '#3a3e4a', 
-    timeVisible: true, 
+    visible: true,
+    timeVisible: true,
     secondsVisible: false,
+    borderColor: '#3a3e4a',
+    height: 30,
+    rightBarStaysOnScroll: true,
   },
-  localization: {
-    locale: 'en-US',
-    dateFormat: 'yyyy-MM-dd',
+  handleScroll: {
+    mouseWheel: true,
+    pressedMouseMove: true,
+  },
+  handleScale: {
+    mouseWheel: true,
+    pinch: true,
   },
 });
 
@@ -92,44 +83,59 @@ export function WeeklyChart({ data, upColor, downColor, maConfigs, isPremium }: 
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const maSeriesRef = useRef<Record<string, ISeriesApi<any>>>({});
+  const [isChartInitialized, setIsChartInitialized] = useState(false);
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    const container = chartContainerRef.current;
+    if (!container) return;
 
-    const chartOptions = {
-      ...getChartOptions(upColor, downColor, '週足チャート'),
-    };
-    const chart = createChart(chartContainerRef.current, chartOptions as TimeChartOptions);
-    chartRef.current = chart;
-    
-    candleSeriesRef.current = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
-
-    Object.values(maConfigs).forEach(config => {
-      maSeriesRef.current[`ma${config.period}`] = chart.addLineSeries({ 
-        color: config.color, 
-        lineWidth: 2, 
-        lastValueVisible: false, 
-        priceLineVisible: false 
-      });
-    });
-    
     const resizeObserver = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
-      chart.applyOptions({ width, height });
+      const entry = entries[0];
+      const { width, height } = entry.contentRect;
+
+      if (width > 0 && height > 0) {
+        if (!chartRef.current) {
+          const chartOptions = {
+            ...getChartOptions(upColor, downColor, '週足チャート'),
+          };
+          const chart = createChart(container, chartOptions as TimeChartOptions);
+          chartRef.current = chart;
+          
+          candleSeriesRef.current = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
+
+          Object.values(maConfigs).forEach(config => {
+            maSeriesRef.current[`ma${config.period}`] = chart.addLineSeries({ 
+              color: config.color, 
+              lineWidth: 2, 
+              lastValueVisible: false, 
+              priceLineVisible: false 
+            });
+          });
+          setIsChartInitialized(true);
+        }
+        chartRef.current.resize(width, height);
+        chartRef.current.timeScale().applyOptions({
+          visible: true,
+          timeVisible: true,
+          secondsVisible: false,
+        });
+      }
     });
 
-    resizeObserver.observe(chartContainerRef.current);
+    resizeObserver.observe(container);
 
     return () => {
       resizeObserver.disconnect();
-      chart.remove();
-      chartRef.current = null;
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!chartRef.current || !candleSeriesRef.current) return;
+    if (!isChartInitialized || !chartRef.current || !candleSeriesRef.current) return;
     
     candleSeriesRef.current.applyOptions(getCandleSeriesOptions(upColor, downColor));
     candleSeriesRef.current.setData(data);
@@ -142,7 +148,8 @@ export function WeeklyChart({ data, upColor, downColor, maConfigs, isPremium }: 
         series.applyOptions({ visible: isPremium && config.visible });
       }
     });
-  }, [data, upColor, downColor, maConfigs, isPremium]);
+    chartRef.current.timeScale().fitContent();
+  }, [isChartInitialized, data, upColor, downColor, maConfigs, isPremium]);
 
   return <div ref={chartContainerRef} className="w-full h-full" />;
 }
@@ -179,50 +186,65 @@ export function StockChart({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<Record<string, ISeriesApi<any>>>({});
+  const [isChartInitialized, setIsChartInitialized] = useState(false);
   
   useEffect(() => {
-    if (!chartContainerRef.current) return;
-    
-    const chart = createChart(chartContainerRef.current, {
-      ...getChartOptions(upColor, downColor, chartTitle),
-    } as TimeChartOptions);
-    chartRef.current = chart;
-    
-    // --- Series Creation ---
-    seriesRef.current.candle = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
-    seriesRef.current.volume = chart.addHistogramSeries({
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'volume',
-      priceLineVisible: false,
-    });
-    chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-    Object.values(maConfigs).forEach(config => {
-        const period = config.period.toString();
-        seriesRef.current[`ma${period}`] = chart.addLineSeries({ color: config.color, lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
-    });
-    seriesRef.current.rsi = chart.addLineSeries({ priceScaleId: 'rsi', color: '#FFC107', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
-    chart.priceScale('rsi').applyOptions({ scaleMargins: { top: 0.9, bottom: 0 } });
-    seriesRef.current.macdLine = chart.addLineSeries({ priceScaleId: 'macd', color: '#2196F3', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
-    seriesRef.current.macdSignal = chart.addLineSeries({ priceScaleId: 'macd', color: '#FF5252', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
-    seriesRef.current.macdHistogram = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
-    chart.priceScale('macd').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
-    
+    const container = chartContainerRef.current;
+    if (!container) return;
+
     const resizeObserver = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
-      chart.applyOptions({ width, height });
+      const entry = entries[0];
+      const { width, height } = entry.contentRect;
+
+      if (width > 0 && height > 0) {
+        if (!chartRef.current) {
+          const chart = createChart(container, {
+            ...getChartOptions(upColor, downColor, chartTitle),
+          } as TimeChartOptions);
+          chartRef.current = chart;
+          
+          seriesRef.current.candle = chart.addCandlestickSeries(getCandleSeriesOptions(upColor, downColor));
+          seriesRef.current.volume = chart.addHistogramSeries({
+            priceFormat: { type: 'volume' },
+            priceScaleId: 'volume',
+            priceLineVisible: false,
+          });
+          chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+          Object.values(maConfigs).forEach(config => {
+              const period = config.period.toString();
+              seriesRef.current[`ma${period}`] = chart.addLineSeries({ color: config.color, lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+          });
+          seriesRef.current.rsi = chart.addLineSeries({ priceScaleId: 'rsi', color: '#FFC107', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+          chart.priceScale('rsi').applyOptions({ scaleMargins: { top: 0.9, bottom: 0 } });
+          seriesRef.current.macdLine = chart.addLineSeries({ priceScaleId: 'macd', color: '#2196F3', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+          seriesRef.current.macdSignal = chart.addLineSeries({ priceScaleId: 'macd', color: '#FF5252', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+          seriesRef.current.macdHistogram = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
+          chart.priceScale('macd').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+          setIsChartInitialized(true);
+        }
+        chartRef.current.resize(width, height);
+        chartRef.current.timeScale().applyOptions({
+          visible: true,
+          timeVisible: true,
+          secondsVisible: false,
+        });
+      }
     });
 
-    resizeObserver.observe(chartContainerRef.current);
+    resizeObserver.observe(container);
 
     return () => {
       resizeObserver.disconnect();
-      chart.remove();
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   useEffect(() => {
-    if (!chartRef.current || !seriesRef.current.candle) return;
+    if (!isChartInitialized || !chartRef.current || !seriesRef.current.candle) return;
     
     seriesRef.current.candle.applyOptions(getCandleSeriesOptions(upColor, downColor));
 
@@ -266,8 +288,9 @@ export function StockChart({
         const isVisible = macdData.length > 0;
         chartRef.current.priceScale('macd').applyOptions({ visible: isVisible });
     }
+    chartRef.current.timeScale().fitContent();
 
-  }, [chartData, replayIndex, maConfigs, rsiData, macdData, upColor, downColor, volumeConfig, isPremium]);
+  }, [isChartInitialized, chartData, replayIndex, maConfigs, rsiData, macdData, upColor, downColor, volumeConfig, isPremium]);
   
   useEffect(() => {
     if (!chartRef.current) return;
