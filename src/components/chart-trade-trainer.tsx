@@ -65,7 +65,7 @@ export default function ChartTradeTrainer() {
         title: 'プレミアム機能',
         description: '週足チャートの表示はプレミアムプランで利用できます。',
         action: (
-          <Button variant="outline" size="sm" onClick={() => router.push('/pricing')}>
+          <Button variant="premium" size="sm" onClick={() => router.push('/pricing')}>
             アップグレード
           </Button>
         ),
