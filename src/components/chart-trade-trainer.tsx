@@ -166,37 +166,23 @@ export default function ChartTradeTrainer() {
                   </div>
                 </div>
                 {state.showWeeklyChart && (
-                  <>
-                    <div className="h-[30%] border-t-2 border-gray-500 relative">
-                      <div className="absolute inset-0">
-                        <WeeklyChart
-                          key={`${state.chartTitle}-weekly-bottom`}
-                          data={state.weeklyData}
-                          upColor={state.upColor}
-                          downColor={state.downColor}
-                          maConfigs={state.maConfigs}
-                          isPremium={!!userData?.isPremium}
-                        />
-                      </div>
-                    </div>
-                    <FloatingWindow 
-                      title="週足チャート (フローティング)" 
-                      isOpen={state.showWeeklyChart} 
-                      onClose={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
-                      onInteractionEnd={handleInteractionEnd}
-                    >
-                      {(size) => (
-                        <WeeklyChart
-                          key={`${state.chartTitle}-weekly-floating-${chartKey}`}
-                          data={state.weeklyData}
-                          upColor={state.upColor}
-                          downColor={state.downColor}
-                          maConfigs={state.maConfigs}
-                          isPremium={!!userData?.isPremium}
-                        />
-                      )}
-                    </FloatingWindow>
-                  </>
+                  <FloatingWindow 
+                    title="週足チャート (フローティング)" 
+                    isOpen={state.showWeeklyChart} 
+                    onClose={() => dispatch({ type: 'TOGGLE_WEEKLY_CHART' })}
+                    onInteractionEnd={handleInteractionEnd}
+                  >
+                    {(size) => (
+                      <WeeklyChart
+                        key={`${state.chartTitle}-weekly-floating-${chartKey}`}
+                        data={state.weeklyData}
+                        upColor={state.upColor}
+                        downColor={state.downColor}
+                        maConfigs={state.maConfigs}
+                        isPremium={!!userData?.isPremium}
+                      />
+                    )}
+                  </FloatingWindow>
                 )}
               </>
             ) : (

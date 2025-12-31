@@ -31,9 +31,12 @@ export async function POST(req: Request) {
       limit: 1,
     });
 
+    let customerId: string | undefined;
+
     // 顧客が存在し、アクティブなサブスクリプションを持っているか確認
     if (customers.data.length > 0) {
       const customer = customers.data[0];
+      customerId = customer.id;
       const subscriptions = await stripe.subscriptions.list({
         customer: customer.id,
         status: 'active',
@@ -51,8 +54,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Stripe Checkout Sessionの作成
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       line_items: [
         {
@@ -77,7 +79,16 @@ export async function POST(req: Request) {
         userId: userId,
         userEmail: userEmail,
       },
-    });
+    };
+
+    if (customerId) {
+      sessionParams.customer = customerId;
+    } else {
+      sessionParams.customer_email = userEmail;
+    }
+
+    // Stripe Checkout Sessionの作成
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {

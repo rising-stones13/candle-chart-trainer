@@ -43,15 +43,14 @@ const getChartOptions = (upColor: string, downColor: string, title: string) => (
   rightPriceScale: { 
     borderColor: '#3a3e4a',
   },
-  timeScale: { 
-    visible: true,
-    timeVisible: true,
-    secondsVisible: false,
-    borderColor: '#3a3e4a',
-    height: 30,
-    rightBarStaysOnScroll: true,
-  },
-  handleScroll: {
+      timeScale: {
+        visible: true,
+        timeVisible: true,
+        secondsVisible: false,
+        borderColor: '#3a3e4a',
+        height: 30,
+        rightBarStaysOnScroll: true,
+      },  handleScroll: {
     mouseWheel: true,
     pressedMouseMove: true,
   },
@@ -148,7 +147,14 @@ export function WeeklyChart({ data, upColor, downColor, maConfigs, isPremium }: 
         series.applyOptions({ visible: isPremium && config.visible });
       }
     });
-    chartRef.current.timeScale().fitContent();
+    const dataSize = data.length;
+    if (dataSize > 0) {
+      const to = dataSize - 1;
+      const from = Math.max(0, dataSize - 100); // 直近100件を表示
+      chartRef.current.timeScale().setVisibleLogicalRange({ from, to });
+    } else {
+      chartRef.current.timeScale().fitContent();
+    }
   }, [isChartInitialized, data, upColor, downColor, maConfigs, isPremium]);
 
   return <div ref={chartContainerRef} className="w-full h-full" />;
@@ -288,7 +294,15 @@ export function StockChart({
         const isVisible = macdData.length > 0;
         chartRef.current.priceScale('macd').applyOptions({ visible: isVisible });
     }
-    chartRef.current.timeScale().fitContent();
+
+    const dataSize = currentData.length;
+    if (dataSize > 0 && replayIndex === null) {
+      const to = dataSize - 1;
+      const from = Math.max(0, dataSize - 100); // 直近100件を表示
+      chartRef.current.timeScale().setVisibleLogicalRange({ from, to });
+    } else {
+      chartRef.current.timeScale().fitContent();
+    }
 
   }, [isChartInitialized, chartData, replayIndex, maConfigs, rsiData, macdData, upColor, downColor, volumeConfig, isPremium]);
   
