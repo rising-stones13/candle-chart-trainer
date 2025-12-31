@@ -26,6 +26,9 @@ import { ControlPanel, ControlPanelProps } from './control-panel';
 import { SettingsPanel } from './settings-panel';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { sendEmailVerification } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import { MailCheck } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -35,22 +38,66 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, controlPanelProps }: DashboardLayoutProps) {
   const { user, userData, logOut } = useAuth();
   const pathname = usePathname();
+  const { toast } = useToast();
   const [isChartSettingsDrawerOpen, setIsChartSettingsDrawerOpen] = useState(false);
-  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const showChartSettings = pathname === '/';
 
   if (!user) return null;
 
+  const handleResendVerification = async () => {
+    if (!user) return;
+    setIsResending(true);
+    try {
+      const actionCodeSettings = {
+        url: `${window.location.origin}/`,
+        handleCodeInApp: false,
+      };
+      await sendEmailVerification(user, actionCodeSettings);
+      toast({
+        title: "確認メールを再送信しました",
+        description: "メールボックスをご確認ください。",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "エラー",
+        description: "メールの送信に失敗しました。時間をおいてから再度お試しください。",
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  if (!user.emailVerified) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4">
+        <div className="text-center max-w-md">
+          <MailCheck className="mx-auto h-12 w-12 text-primary mb-4" />
+          <h1 className="text-2xl font-bold">メール認証が必要です</h1>
+          <p className="mt-2 text-muted-foreground">
+            ご登録いただいたメールアドレスに確認メールを送信しました。<br />
+            メール内のリンクをクリックして、アカウントの認証を完了してください。
+          </p>
+          <div className="mt-6 flex flex-col gap-2">
+             <Button onClick={handleResendVerification} disabled={isResending}>
+              {isResending ? '送信中...' : '確認メールを再送信'}
+            </Button>
+            <Button variant="outline" onClick={logOut}>ログアウト</Button>
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            メールが届かない場合は、迷惑メールフォルダもご確認ください。
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const handleChartSettingsOpen = () => {
     setIsMobileNavOpen(false);
     setIsChartSettingsDrawerOpen(true);
-  }
-
-  const handleSettingsOpen = () => {
-    setIsMobileNavOpen(false);
-    setIsSettingsDrawerOpen(true);
   }
 
   const NavContent = () => (
@@ -62,10 +109,13 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
         <Home className="h-4 w-4" />
         ホーム
       </Link>
-      <Button variant="ghost" onClick={handleSettingsOpen} className="flex items-center gap-3 justify-start rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
-          <Settings className="h-4 w-4" />
-          設定
-      </Button>
+      <Link
+        href="/settings"
+        onClick={() => setIsMobileNavOpen(false)}
+        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/settings' ? 'bg-muted' : ''}`}>
+        <Settings className="h-4 w-4" />
+        アカウント設定
+      </Link>
       {showChartSettings && controlPanelProps && (
          <Button variant="ghost" onClick={handleChartSettingsOpen} className="flex items-center gap-3 justify-start rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
             <SlidersHorizontal className="h-4 w-4" />
@@ -153,10 +203,12 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
              <DropdownMenuContent align="end">
               <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSettingsOpen}>
-                <Settings className="mr-2 h-4 w-4"/>
-                <span>アカウント設定</span>
-              </DropdownMenuItem>
+              <Link href="/settings" passHref>
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4"/>
+                  <span>アカウント設定</span>
+                </DropdownMenuItem>
+              </Link>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logOut}><LogOut className="mr-2 h-4 w-4"/>ログアウト</DropdownMenuItem>
             </DropdownMenuContent>
@@ -166,18 +218,6 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
             {children}
         </main>
       </div>
-
-      <Sheet open={isSettingsDrawerOpen} onOpenChange={setIsSettingsDrawerOpen}>
-        <SheetContent side="left" className="p-0 w-[340px] sm:w-[400px] flex flex-col">
-            <SheetHeader className="p-4 border-b text-left">
-                <SheetTitle>アカウント設定</SheetTitle>
-                <SheetDescription>アカウント情報、プラン、その他の設定を管理します。</SheetDescription>
-            </SheetHeader>
-            <div className="p-4 flex-grow overflow-y-auto">
-                <SettingsPanel />
-            </div>
-        </SheetContent>
-      </Sheet>
 
       {showChartSettings && controlPanelProps && (
         <Sheet open={isChartSettingsDrawerOpen} onOpenChange={setIsChartSettingsDrawerOpen}>

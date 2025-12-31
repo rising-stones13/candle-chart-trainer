@@ -22,5 +22,6 @@ const db = initializeFirestore(app, {
 });
 
 const auth = getAuth(app);
+auth.languageCode = 'ja';
 
 export { app, db, auth };

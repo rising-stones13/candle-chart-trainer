@@ -16,6 +16,7 @@ import {
   deleteUser, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   GoogleAuthProvider, 
   signInWithPopup,
   reauthenticateWithPopup
@@ -148,11 +149,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback(async (email: string, password: string) => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
+      const actionCodeSettings = {
+        url: `${window.location.origin}/`,
+        handleCodeInApp: false,
+      };
+      await sendEmailVerification(result.user, actionCodeSettings);
       await ensureUserDoc(result.user);
       
       toast({ 
-        title: "アカウントを作成しました",
-        description: "Candle Chart Trainerへようこそ！"
+        title: "確認メールを送信しました",
+        description: "アカウントを有効化するため、メールボックスをご確認ください。"
       });
     } catch (error: any) {
       let message = 'アカウントの作成に失敗しました。';
@@ -178,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       throw new Error(message);
     }
-  }, [toast]);
+  }, [toast, ensureUserDoc]);
 
   const logIn = useCallback(async (email: string, password: string) => {
     try {

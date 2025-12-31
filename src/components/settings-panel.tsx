@@ -148,7 +148,7 @@ export function SettingsPanel() {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 {/* ▼▼▼ 【修正】ボタンのvariantを`destructive`に変更 ▼▼▼ */}
-                <Button variant="destructive" className="w-full" disabled={isCanceling}>
+                <Button variant="destructive" disabled={isCanceling}>
                   {isCanceling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> 解除処理中...</> : 'プレミアムプランを解除する'}
                 </Button>
               </AlertDialogTrigger>

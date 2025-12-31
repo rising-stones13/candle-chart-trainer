@@ -89,10 +89,6 @@ export default function SignUpPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? '登録中...' : 'アカウントを作成'}
             </Button>
-            {/* ▼▼▼ 【修正】Google登録ボタンのonClickイベント ▼▼▼ */}
-            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignUp} disabled={loading}>
-              Googleで登録
-            </Button>
           </form>
           <div className="mt-4 text-center text-sm">
             すでにアカウントをお持ちですか？{" "}
