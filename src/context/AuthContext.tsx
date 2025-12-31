@@ -148,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(async (email: string, password: string) => {
     try {
+      auth.languageCode = 'ja';
       const result = await createUserWithEmailAndPassword(auth, email, password);
       const actionCodeSettings = {
         url: `${window.location.origin}/`,
