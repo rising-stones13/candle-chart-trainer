@@ -75,9 +75,11 @@ export interface WeeklyChartProps {
   downColor: string;
   maConfigs: Record<string, MAConfig>;
   isPremium: boolean;
+  replayIndex: number | null;
+  dailyChartData: CandleData[];
 }
 
-export function WeeklyChart({ data, upColor, downColor, maConfigs, isPremium }: WeeklyChartProps) {
+export function WeeklyChart({ data, upColor, downColor, maConfigs, isPremium, replayIndex, dailyChartData }: WeeklyChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -156,6 +158,26 @@ export function WeeklyChart({ data, upColor, downColor, maConfigs, isPremium }: 
       chartRef.current.timeScale().fitContent();
     }
   }, [isChartInitialized, data, upColor, downColor, maConfigs, isPremium]);
+
+  useEffect(() => {
+    if (!chartRef.current || replayIndex === null || !dailyChartData[replayIndex]) return;
+
+    // 現在の日付に対応する週を検索
+    const dailyDate = new Date((dailyChartData[replayIndex].time as number) * 1000);
+    const dayOfWeek = dailyDate.getUTCDay();
+    const weekStartDate = new Date(dailyDate.getTime());
+    weekStartDate.setUTCDate(dailyDate.getUTCDate() - dayOfWeek);
+    weekStartDate.setUTCHours(0, 0, 0, 0);
+    const weekStartTime = weekStartDate.getTime() / 1000;
+
+    const weeklyIndex = data.findIndex(d => d.time === weekStartTime);
+
+    if (weeklyIndex !== -1) {
+      const to = weeklyIndex;
+      const from = Math.max(0, to - 99); // 常に100件のデータを表示
+      chartRef.current.timeScale().setVisibleLogicalRange({ from, to });
+    }
+  }, [replayIndex, data, dailyChartData]);
 
   return <div ref={chartContainerRef} className="w-full h-full" />;
 }

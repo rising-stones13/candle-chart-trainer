@@ -184,6 +184,8 @@ export default function ChartTradeTrainer() {
                         downColor={state.downColor}
                         maConfigs={state.maConfigs}
                         isPremium={!!userData?.isPremium}
+                        replayIndex={state.replayIndex}
+                        dailyChartData={state.chartData}
                       />
                     )}
                   </FloatingWindow>
