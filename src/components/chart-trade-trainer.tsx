@@ -69,7 +69,11 @@ export default function ChartTradeTrainer() {
   };
 
   const handlePartialClose = (type: 'long' | 'short') => {
-    dispatch({ type: 'CLOSE_PARTIAL_POSITION', payload: { type, amount: 100 } });
+    dispatch({ type: 'CLOSE_PARTIAL_POSITION', payload: { type } });
+  };
+
+  const handleCloseAllPositionsOfType = (type: 'long' | 'short') => {
+    dispatch({ type: 'CLOSE_ALL_POSITIONS_OF_TYPE', payload: { type } });
   };
 
   const handleToggleWeeklyChart = () => {
@@ -202,6 +206,7 @@ export default function ChartTradeTrainer() {
               unrealizedPL={state.unrealizedPL}
               onTrade={(type) => dispatch({ type: 'TRADE', payload: type })}
               onClosePosition={handlePartialClose}
+              onCloseAllPositionsOfType={handleCloseAllPositionsOfType}
               onNextDay={() => dispatch({ type: 'NEXT_DAY' })}
               onDateChange={handleDateChange}
             />

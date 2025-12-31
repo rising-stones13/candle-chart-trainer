@@ -296,7 +296,7 @@ export function StockChart({
     }
 
     const dataSize = currentData.length;
-    if (dataSize > 0 && replayIndex === null) {
+    if (dataSize > 0) {
       const to = dataSize - 1;
       const from = Math.max(0, dataSize - 100); // 直近100件を表示
       chartRef.current.timeScale().setVisibleLogicalRange({ from, to });
@@ -306,16 +306,6 @@ export function StockChart({
 
   }, [isChartInitialized, chartData, replayIndex, maConfigs, rsiData, macdData, upColor, downColor, volumeConfig, isPremium]);
   
-  useEffect(() => {
-    if (!chartRef.current) return;
-    
-    if (replayIndex !== null) {
-        const dataLength = chartData.length;
-        const to = dataLength > 0 ? dataLength - 1 : 0;
-        chartRef.current.timeScale().scrollToPosition(to, false);
-    }
-  }, [replayIndex, chartData.length]);
-
   useEffect(() => {
     if (!seriesRef.current.candle) return;
     

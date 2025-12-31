@@ -26,6 +26,7 @@ interface TradePanelProps {
   unrealizedPL: number;
   onTrade: (type: 'long' | 'short') => void;
   onClosePosition: (positionType: 'long' | 'short') => void;
+  onCloseAllPositionsOfType: (positionType: 'long' | 'short') => void;
   onNextDay: () => void;
   onDateChange: (date?: Date) => void;
 }
@@ -39,6 +40,7 @@ export function TradePanel({
   unrealizedPL, 
   onTrade, 
   onClosePosition,
+  onCloseAllPositionsOfType,
   onNextDay,
   onDateChange,
 }: TradePanelProps) {
@@ -51,6 +53,9 @@ export function TradePanel({
   };
   
   const totalPL = realizedPL + unrealizedPL;
+
+  const hasLongPosition = positions.some(p => p.type === 'long');
+  const hasShortPosition = positions.some(p => p.type === 'short');
 
   const handleDateSelect = (date?: Date) => {
     onDateChange(date);
@@ -140,7 +145,7 @@ export function TradePanel({
 
         <div className="flex-grow flex flex-col min-h-0 mt-2">
             <h3 className="text-md font-semibold">保有ポジション</h3>
-            <ScrollArea className="flex-grow">
+            <ScrollArea className="flex-grow mt-1">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -164,16 +169,28 @@ export function TradePanel({
                                     <TableCell className="p-2">{formatCurrency(pos.avgPrice)}</TableCell>
                                     <TableCell className="p-2">{pos.totalSize}</TableCell>
                                     <TableCell className="p-2 text-right">
+                                      <div className="flex justify-end gap-2">
                                         {pos.type === 'long' && (
-                                            <Button variant="outline" size="sm" className="h-7 px-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white" onClick={() => onClosePosition('long')} disabled={!isReplay}>
-                                                売り決済
-                                            </Button>
+                                            <>
+                                              <Button variant="outline" size="sm" className="h-7 px-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white" onClick={() => onClosePosition('long')} disabled={!isReplay}>
+                                                  売り決済
+                                              </Button>
+                                              <Button variant="destructive" size="sm" className="h-7 px-2" onClick={() => onCloseAllPositionsOfType('long')} disabled={!isReplay}>
+                                                  全決済
+                                              </Button>
+                                            </>
                                         )}
                                         {pos.type === 'short' && (
-                                            <Button variant="outline" size="sm" className="h-7 px-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white" onClick={() => onClosePosition('short')} disabled={!isReplay}>
-                                                買い決済
-                                            </Button>
+                                            <>
+                                              <Button variant="outline" size="sm" className="h-7 px-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white" onClick={() => onClosePosition('short')} disabled={!isReplay}>
+                                                  買い決済
+                                              </Button>
+                                              <Button variant="destructive" size="sm" className="h-7 px-2" onClick={() => onCloseAllPositionsOfType('short')} disabled={!isReplay}>
+                                                  全決済
+                                              </Button>
+                                            </>
                                         )}
+                                      </div>
                                     </TableCell>
                                 </TableRow>
                             ))

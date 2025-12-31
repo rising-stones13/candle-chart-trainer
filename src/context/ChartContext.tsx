@@ -31,7 +31,8 @@ type Action =
   | { type: 'START_REPLAY'; payload: Date }
   | { type: 'NEXT_DAY' }
   | { type: 'TRADE'; payload: 'long' | 'short' }
-  | { type: 'CLOSE_PARTIAL_POSITION'; payload: { type: 'long' | 'short'; amount: number } }
+  | { type: 'CLOSE_PARTIAL_POSITION'; payload: { type: 'long' | 'short' } }
+  | { type: 'CLOSE_ALL_POSITIONS_OF_TYPE'; payload: { type: 'long' | 'short' } }
   | { type: 'TOGGLE_MA'; payload: string }
   | { type: 'TOGGLE_RSI' }
   | { type: 'TOGGLE_MACD' }
@@ -120,19 +121,33 @@ function chartReducer(state: AppState, action: Action): AppState {
       const existingPosIndex = state.positions.findIndex(p => p.type === type);
       let newPositions = [...state.positions];
 
+      const newEntry: PositionEntry = {
+        id: Math.random().toString(36).substring(2, 9),
+        price: currentPrice,
+        size: 1, // 1単位ずつ取引
+        date: currentTime,
+      };
+
       if (existingPosIndex >= 0) {
+        // 既存ポジションの更新
         const pos = newPositions[existingPosIndex];
-        const newSize = pos.totalSize + 1;
-        const newAvgPrice = (pos.avgPrice * pos.totalSize + currentPrice) / newSize;
-        newPositions[existingPosIndex] = { ...pos, totalSize: newSize, avgPrice: newAvgPrice };
+        const newEntries = [...pos.entries, newEntry];
+        const newSize = newEntries.reduce((sum, e) => sum + e.size, 0);
+        const newAvgPrice = newEntries.reduce((sum, e) => sum + (e.price * e.size), 0) / newSize;
+        
+        newPositions[existingPosIndex] = {
+          ...pos,
+          entries: newEntries,
+          totalSize: newSize,
+          avgPrice: newAvgPrice
+        };
       } else {
+        // 新規ポジションの作成
         newPositions.push({
-          id: Math.random().toString(36).substring(2, 9),
           type,
-          entryPrice: currentPrice,
-          avgPrice: currentPrice,
-          totalSize: 1,
-          entryTime: currentTime as number,
+          entries: [newEntry],
+          totalSize: newEntry.size,
+          avgPrice: newEntry.price,
         });
       }
 
@@ -145,34 +160,51 @@ function chartReducer(state: AppState, action: Action): AppState {
     }
     case 'CLOSE_PARTIAL_POSITION': {
       if (state.replayIndex === null) return state;
-      const { type, amount } = action.payload;
+      const { type } = action.payload; // amount is ignored, we close one entry (FIFO)
       const currentPrice = state.chartData[state.replayIndex].close;
       const currentTime = state.chartData[state.replayIndex].time;
 
       const posIndex = state.positions.findIndex(p => p.type === type);
-      if (posIndex === -1) return state;
+      if (posIndex === -1 || state.positions[posIndex].entries.length === 0) return state;
 
       const pos = state.positions[posIndex];
-      const closeAmount = Math.min(amount, pos.totalSize);
-      const profit = type === 'long' ? (currentPrice - pos.avgPrice) * closeAmount : (pos.avgPrice - currentPrice) * closeAmount;
+      // FIFO: oldest entry is closed
+      const entryToClose = pos.entries[0];
+      const closeAmount = entryToClose.size;
 
-      let newPositions = [...state.positions];
-      if (pos.totalSize === closeAmount) {
-        newPositions.splice(posIndex, 1);
-      } else {
-        newPositions[posIndex] = { ...pos, totalSize: pos.totalSize - closeAmount };
-      }
+      const profit = pos.type === 'long'
+        ? (currentPrice - entryToClose.price) * closeAmount
+        : (entryToClose.price - currentPrice) * closeAmount;
 
       const newTrade: Trade = {
-        id: Math.random().toString(36).substring(2, 9),
+        id: entryToClose.id,
         type,
-        entryPrice: pos.avgPrice,
+        entryPrice: entryToClose.price,
         exitPrice: currentPrice,
         size: closeAmount,
-        pl: profit,
-        time: currentTime as number,
+        entryDate: entryToClose.date,
+        exitDate: currentTime,
+        profit,
       };
 
+      const remainingEntries = pos.entries.slice(1);
+      let newPositions = [...state.positions];
+
+      if (remainingEntries.length === 0) {
+        // Position fully closed
+        newPositions.splice(posIndex, 1);
+      } else {
+        // Position partially closed
+        const newSize = remainingEntries.reduce((sum, e) => sum + e.size, 0);
+        const newAvgPrice = remainingEntries.reduce((sum, e) => sum + (e.price * e.size), 0) / newSize;
+        newPositions[posIndex] = {
+          ...pos,
+          entries: remainingEntries,
+          totalSize: newSize,
+          avgPrice: newAvgPrice,
+        };
+      }
+      
       const unrealizedPL = newPositions.reduce((acc, p) => {
         const pl = p.type === 'long' ? (currentPrice - p.avgPrice) * p.totalSize : (p.avgPrice - currentPrice) * p.totalSize;
         return acc + pl;
@@ -184,6 +216,51 @@ function chartReducer(state: AppState, action: Action): AppState {
         tradeHistory: [newTrade, ...state.tradeHistory],
         realizedPL: state.realizedPL + profit,
         unrealizedPL
+      };
+    }
+    case 'CLOSE_ALL_POSITIONS_OF_TYPE': {
+      const { type } = action.payload;
+      if (state.replayIndex === null) return state;
+      
+      const posToClose = state.positions.find(p => p.type === type);
+      if (!posToClose) return state;
+
+      const currentPrice = state.chartData[state.replayIndex].close;
+      const currentTime = state.chartData[state.replayIndex].time;
+      let realizedPLUpdate = 0;
+      const newTrades: Trade[] = [];
+
+      for (const entry of posToClose.entries) {
+        const profit = posToClose.type === 'long'
+          ? (currentPrice - entry.price) * entry.size
+          : (entry.price - currentPrice) * entry.size;
+        
+        realizedPLUpdate += profit;
+
+        newTrades.push({
+          id: entry.id,
+          type: posToClose.type,
+          entryPrice: entry.price,
+          exitPrice: currentPrice,
+          size: entry.size,
+          entryDate: entry.date,
+          exitDate: currentTime,
+          profit,
+        });
+      }
+
+      const newPositions = state.positions.filter(p => p.type !== type);
+      const newUnrealizedPL = newPositions.reduce((acc, p) => {
+        const pl = p.type === 'long' ? (currentPrice - p.avgPrice) * p.totalSize : (p.avgPrice - currentPrice) * p.totalSize;
+        return acc + pl;
+      }, 0);
+
+      return {
+        ...state,
+        positions: newPositions,
+        tradeHistory: [...newTrades, ...state.tradeHistory],
+        realizedPL: state.realizedPL + realizedPLUpdate,
+        unrealizedPL: newUnrealizedPL,
       };
     }
     case 'TOGGLE_WEEKLY_CHART':
