@@ -41,6 +41,7 @@ export async function getSecrets(): Promise<Record<string, string>> {
       FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')!,
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY!,
       STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET!,
+      RESEND_API_KEY: process.env.RESEND_API_KEY!,
       // Public variables are accessed directly via process.env in the frontend,
       // but we can ensure they are present here.
       NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
@@ -76,6 +77,7 @@ export async function getSecrets(): Promise<Record<string, string>> {
     'FIREBASE_PRIVATE_KEY',
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
+    'RESEND_API_KEY',
     'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
     'NEXT_PUBLIC_FIREBASE_API_KEY',
     'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',

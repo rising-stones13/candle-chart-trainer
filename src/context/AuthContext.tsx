@@ -9,19 +9,18 @@ import {
   useCallback,
   ReactNode 
 } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   onAuthStateChanged, 
   User, 
   signOut, 
-  deleteUser, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   sendEmailVerification,
   GoogleAuthProvider, 
   signInWithPopup,
-  reauthenticateWithPopup
 } from 'firebase/auth';
-import { doc, onSnapshot, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -52,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -242,74 +242,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const deleteAccount = useCallback(async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      toast({ variant: "destructive", title: "エラー", description: "再ログインが必要です。" });
+      toast({ variant: "destructive", title: "エラー", description: "ログインしていません。" });
       return;
     }
-    
+
     try {
-      const uid = currentUser.uid;
-      const userDocRef = doc(db, 'users', uid);
+      const token = await currentUser.getIdToken();
 
-      // 1. 先にFirestoreのデータを削除（認証が有効なうちに実行）
-      await deleteDoc(userDocRef);
-      console.log(`[AuthContext] Firestore document for user ${uid} deleted.`);
+      const response = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-      // 2. 次にFirebase Authユーザーを削除
-      // ※ セッションが古い場合はここで 'auth/requires-recent-login' がスローされます
-      await deleteUser(currentUser);
-      console.log(`[AuthContext] Firebase Auth user ${uid} deleted.`);
+      if (!response.ok) {
+        // APIから返されたエラーメッセージを試みる
+        let errorMessage = "アカウントの削除に失敗しました。";
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+            // JSONのパースに失敗した場合は、ステータスコードに準じたメッセージを表示
+            errorMessage = `サーバーエラーが発生しました (ステータス: ${response.status})。`;
+        }
+        throw new Error(errorMessage);
+      }
 
       toast({ title: "アカウントが正常に削除されました" });
+      await signOut(auth);
 
     } catch (error: any) {
       console.error('Error deleting account:', error);
-      
-      if (error.code === 'auth/requires-recent-login') {
-        const isGoogle = currentUser.providerData.some(
-          (p) => p.providerId === GoogleAuthProvider.PROVIDER_ID
-        );
-
-        if (isGoogle) {
-          try {
-            const provider = new GoogleAuthProvider();
-            await reauthenticateWithPopup(currentUser, provider);
-            
-            // Re-authentication successful, try deleting again.
-            await deleteUser(currentUser);
-            toast({ title: "アカウントが正常に削除されました" });
-            return;
-          } catch (reAuthError: any) {
-            console.error("Re-authentication failed:", reAuthError);
-            let message = "再認証に失敗しました。";
-            if (reAuthError.code === 'auth/popup-blocked') {
-              message = "再認証ポップアップがブロックされました。ブラウザの設定を確認し、ポップアップを許可してから再度お試しください。";
-            } else if (reAuthError.code === 'auth/cancelled-popup-request') {
-              message = "再認証がキャンセルされました。";
-            }
-            
-            toast({ 
-              variant: "destructive", 
-              title: "再認証エラー", 
-              description: message
-            });
-            return;
-          }
-        }
-      }
-
-      let message = "アカウントの削除に失敗しました。";
-      if (error.code === 'auth/requires-recent-login') {
-        message = "セキュリティ保護のため、アカウント削除には再ログインが必要です。一度ログアウトしてから再度ログインし、直後に削除をお試しください。";
-      }
-
-      toast({ 
-        variant: "destructive", 
-        title: "アカウント削除エラー", 
-        description: message
+      toast({
+        variant: "destructive",
+        title: "アカウント削除エラー",
+        description: error.message || "アカウントの削除中に予期せぬエラーが発生しました。"
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, router]);
 
   const value = useMemo(() => ({ 
     user, 
@@ -321,7 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logOut, 
     deleteAccount 
   }), [
-    user, userData, loading, logIn, signUp, logInWithGoogle, logOut, deleteAccount
+    user, userData, loading, logIn, signUp, logInWithGoogle, logOut, deleteAccount, router
   ]);
 
   if (!mounted) {
