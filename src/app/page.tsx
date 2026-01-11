@@ -56,8 +56,16 @@ export default function Home() {
               <Link href="/signup">新規登録</Link>
             </Button>
           </div>
-          <div className="mt-8 text-sm text-muted-foreground">
-            データ形式について知りたいですか？ <Link href="/help" className="underline hover:text-primary">ヘルプを確認する</Link>
+          <div className="mt-8 flex flex-col items-center gap-4">
+            <div className="flex gap-4 text-sm text-muted-foreground">
+              <Link href="/help" className="hover:text-primary underline underline-offset-4">ヘルプ</Link>
+              <Link href="/terms" className="hover:text-primary underline underline-offset-4">利用規約</Link>
+              <Link href="/privacy" className="hover:text-primary underline underline-offset-4">プライバシーポリシー</Link>
+              <Link href="/legal" className="hover:text-primary underline underline-offset-4">特定商取引法に基づく表記</Link>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} ChartTrade Trainer. All rights reserved.
+            </p>
           </div>
         </div>
       )}

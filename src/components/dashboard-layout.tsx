@@ -21,7 +21,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge"; // <-- 1. Import Badge
 import { useAuth } from '@/context/AuthContext';
-import { Home, LineChart, Settings, SlidersHorizontal, LogOut, Menu, CircleHelp } from 'lucide-react';
+import { Home, LineChart, Settings, SlidersHorizontal, LogOut, Menu, CircleHelp, FileText, Shield, Scale } from 'lucide-react';
 import { ControlPanel, ControlPanelProps } from './control-panel';
 import { SettingsPanel } from './settings-panel';
 import { usePathname } from 'next/navigation';
@@ -123,8 +123,30 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
         <CircleHelp className="h-4 w-4" />
         ヘルプ
       </Link>
+      <div className="my-2 border-t border-muted" />
+      <Link
+        href="/terms"
+        onClick={() => setIsMobileNavOpen(false)}
+        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/terms' ? 'bg-muted' : ''}`}>
+        <FileText className="h-4 w-4" />
+        利用規約
+      </Link>
+      <Link
+        href="/privacy"
+        onClick={() => setIsMobileNavOpen(false)}
+        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/privacy' ? 'bg-muted' : ''}`}>
+        <Shield className="h-4 w-4" />
+        プライバシーポリシー
+      </Link>
+      <Link
+        href="/legal"
+        onClick={() => setIsMobileNavOpen(false)}
+        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/legal' ? 'bg-muted' : ''}`}>
+        <Scale className="h-4 w-4" />
+        特定商取引法
+      </Link>
       {showChartSettings && controlPanelProps && (
-         <Button variant="ghost" onClick={handleChartSettingsOpen} className="flex items-center gap-3 justify-start rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+         <Button variant="ghost" onClick={handleChartSettingsOpen} className="flex items-center gap-3 justify-start rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary mt-2">
             <SlidersHorizontal className="h-4 w-4" />
             チャート設定
         </Button>
