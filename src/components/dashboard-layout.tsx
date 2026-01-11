@@ -21,7 +21,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge"; // <-- 1. Import Badge
 import { useAuth } from '@/context/AuthContext';
-import { Home, LineChart, Settings, SlidersHorizontal, LogOut, Menu } from 'lucide-react';
+import { Home, LineChart, Settings, SlidersHorizontal, LogOut, Menu, CircleHelp } from 'lucide-react';
 import { ControlPanel, ControlPanelProps } from './control-panel';
 import { SettingsPanel } from './settings-panel';
 import { usePathname } from 'next/navigation';
@@ -115,6 +115,13 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
         className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/settings' ? 'bg-muted' : ''}`}>
         <Settings className="h-4 w-4" />
         アカウント設定
+      </Link>
+      <Link
+        href="/help"
+        onClick={() => setIsMobileNavOpen(false)}
+        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/help' ? 'bg-muted' : ''}`}>
+        <CircleHelp className="h-4 w-4" />
+        ヘルプ
       </Link>
       {showChartSettings && controlPanelProps && (
          <Button variant="ghost" onClick={handleChartSettingsOpen} className="flex items-center gap-3 justify-start rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">

@@ -11,7 +11,7 @@ import { Separator } from './ui/separator';
 import { useAuth } from '@/context/AuthContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-interface ControlPanelProps {
+export interface ControlPanelProps {
   fileLoaded: boolean;
   upColor: string;
   downColor: string;

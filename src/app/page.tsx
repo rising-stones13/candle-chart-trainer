@@ -56,6 +56,9 @@ export default function Home() {
               <Link href="/signup">新規登録</Link>
             </Button>
           </div>
+          <div className="mt-8 text-sm text-muted-foreground">
+            データ形式について知りたいですか？ <Link href="/help" className="underline hover:text-primary">ヘルプを確認する</Link>
+          </div>
         </div>
       )}
     </main>
