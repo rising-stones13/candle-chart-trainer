@@ -69,11 +69,30 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. サブスクリプション状態の確認と更新
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'active',
-      limit: 1,
-    });
+    let subscriptions;
+    try {
+      subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'active',
+        limit: 1,
+      });
+    } catch (stripeError: any) {
+      // 顧客IDが無効（削除済みなど）の場合のハンドリング
+      if (stripeError.code === 'resource_missing' && stripeError.param === 'customer') {
+        console.error(`[API] CRITICAL: Invalid customer ID ${customerId} found in DB for user ${userId}. Manual intervention required.`);
+        // データ不整合があることを明示的にクライアントへ返す (自動削除はしない)
+        return NextResponse.json(
+          { 
+            error: 'Data Inconsistency', 
+            details: `Stripe customer ${customerId} does not exist. Please check Firestore.` 
+          },
+          { status: 409 } // Conflict
+        );
+      } else {
+        // その他のStripeエラーは再スロー
+        throw stripeError;
+      }
+    }
 
     const isCurrentlyPremiumInDb = userData?.isPremium || false;
     let needsUpdate = false;
@@ -112,7 +131,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'User status is already up to date.', updated: false });
 
   } catch (error: any) {
-    console.error('[API] Sync error:', error);
+    console.error('[API] Sync error occurred:');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Stack trace:', error.stack);
+    
     return NextResponse.json(
       { error: 'Internal Server Error', details: error.message },
       { status: 500 }
