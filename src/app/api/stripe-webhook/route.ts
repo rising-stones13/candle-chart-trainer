@@ -2,19 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getSecrets } from '@/lib/secrets';
+import { Resend } from 'resend';
 
 export async function POST(req: NextRequest) {
   let stripe: Stripe;
   let webhookSecret: string;
+  let resend: Resend;
 
   try {
     const { db } = await getFirebaseAdmin();
     const secrets = await getSecrets();
     const stripeSecretKey = secrets['STRIPE_SECRET_KEY'];
     webhookSecret = secrets['STRIPE_WEBHOOK_SECRET'];
+    const resendApiKey = secrets['RESEND_API_KEY'];
 
-    if (!stripeSecretKey || !webhookSecret) {
-      throw new Error('Stripe secrets not found in Secret Manager.');
+    if (!stripeSecretKey || !webhookSecret || !resendApiKey) {
+      throw new Error('Required secrets (Stripe or Resend) not found in Secret Manager.');
     }
 
     stripe = new Stripe(stripeSecretKey, {
@@ -22,6 +25,7 @@ export async function POST(req: NextRequest) {
       apiVersion: '2023-10-16',
       // ▲▲▲ ここまで ▲▲▲
     });
+    resend = new Resend(resendApiKey);
 
     const payload = await req.text();
     const sig = req.headers.get('stripe-signature')!;
@@ -36,6 +40,7 @@ export async function POST(req: NextRequest) {
         const userId = session.metadata?.userId;
         const customerId = session.customer;
         const subscriptionIdFromSession = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+        const customerEmail = session.customer_details?.email;
 
         if (!userId || !customerId || typeof customerId !== 'string') {
             throw new Error('Missing required metadata (userId or customerId) in checkout session.');
@@ -54,6 +59,27 @@ export async function POST(req: NextRequest) {
         
         await userRef.update(updateData);
         console.log(`Successfully granted premium access to user ${userId}`);
+
+        // メール送信
+        if (customerEmail) {
+            try {
+                await resend.emails.send({
+                    from: 'ChartTrade Trainer <noreply@resend.dev>', // 送信元
+                    to: customerEmail,
+                    subject: 'プレミアムプランへの加入ありがとうございます',
+                    html: `
+                        <p>ChartTrade Trainerのプレミアムプランをご購入いただき、誠にありがとうございます。</p>
+                        <p>プレミアム機能が有効化されました。全てのチャート分析ツールとデモトレード機能をご活用いただけます。</p>
+                        <p>今後ともChartTrade Trainerをよろしくお願いいたします。</p>
+                        <p>ChartTrade Trainer 運営</p>
+                    `,
+                });
+                console.log(`Welcome email sent to ${customerEmail}`);
+            } catch (emailError) {
+                console.error(`Failed to send welcome email to ${customerEmail}:`, emailError);
+                // メール送信失敗はメイン処理の失敗とは扱わない
+            }
+        }
         break;
       }
 
