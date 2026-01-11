@@ -68,7 +68,7 @@ export default function LegalPage() {
               </TableRow>
               <TableRow>
                 <TableCell className="font-semibold">返品・キャンセルについて</TableCell>
-                <TableCell>サービスの性質上、返品・返金は承っておりません。解約はいつでも設定画面から可能です。</TableCell>
+                <TableCell>サービスの性質上、返品・返金は承っておりません。解約はいつでも設定画面から可能ですが、解約手続き完了後、直ちにサービス（有料機能）はご利用いただけなくなります（日割り計算による返金はいたしません）。</TableCell>
               </TableRow>
             </TableBody>
           </Table>
