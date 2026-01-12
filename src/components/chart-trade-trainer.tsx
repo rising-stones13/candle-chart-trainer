@@ -151,8 +151,18 @@ export default function ChartTradeTrainer() {
     try {
       const fileContent = await file.text();
       const { data, meta } = parseStockData(fileContent);
-      const title = meta.longName ? `${meta.longName} (${meta.symbol})` : file.name;
       
+      const displayName = meta?.longName || meta?.shortName;
+      let title = file.name;
+      
+      if (displayName && meta?.symbol) {
+        title = `${displayName} (${meta.symbol})`;
+      } else if (displayName) {
+        title = displayName;
+      } else if (meta?.symbol) {
+        title = meta.symbol;
+      }
+
       const weeklyData = generateWeeklyData(data);
       if (data[0]) {
         console.log('Daily data[0].time:', data[0].time, 'Type:', typeof data[0].time);
