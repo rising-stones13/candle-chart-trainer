@@ -72,6 +72,7 @@ const initialState: AppState = {
   showWeeklyChart: false,
   upColor: '#ef5350',
   downColor: '#26a69a',
+  isDemoData: false,
 };
 
 // Reducer function
@@ -79,12 +80,14 @@ function chartReducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'SET_CHART_DATA': {
       const { data, title } = action.payload;
+      const isDemoData = title.includes('デモ株式会社') || title.includes('サンプルデータ');
       return {
-        ...state, // ユーザーが設定したインジケーターや色などの設定を維持
+        ...state,
         chartData: data,
         weeklyData: generateWeeklyData(data),
         chartTitle: title,
         fileLoaded: true,
+        isDemoData,
         // セッション固有の状態のみリセット
         replayIndex: null,
         isReplay: false,
@@ -124,7 +127,7 @@ function chartReducer(state: AppState, action: Action): AppState {
       const newEntry: PositionEntry = {
         id: Math.random().toString(36).substring(2, 9),
         price: currentPrice,
-        size: 1, // 1単位ずつ取引
+        size: 100, // 100単位ずつ取引
         date: currentTime,
       };
 

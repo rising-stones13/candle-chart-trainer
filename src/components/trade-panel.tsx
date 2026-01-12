@@ -29,6 +29,7 @@ interface TradePanelProps {
   onCloseAllPositionsOfType: (positionType: 'long' | 'short') => void;
   onNextDay: () => void;
   onDateChange: (date?: Date) => void;
+  isDemoData?: boolean;
 }
 
 export function TradePanel({ 
@@ -43,6 +44,7 @@ export function TradePanel({
   onCloseAllPositionsOfType,
   onNextDay,
   onDateChange,
+  isDemoData = false,
 }: TradePanelProps) {
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const { userData } = useAuth();
@@ -63,7 +65,7 @@ export function TradePanel({
   };
 
   const CalendarButton = (
-    <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
+    <Button id="wt-date-picker" variant="outline" className="w-full justify-start text-left font-normal h-9 px-3">
       <CalendarIcon className="mr-2 h-4 w-4" />
       {replayDate ? format(replayDate, 'yyyy年M月d日', { locale: ja }) : <span>開始日を選択</span>}
     </Button>
@@ -111,7 +113,7 @@ export function TradePanel({
           )}
 
           <div className="grid grid-cols-1 gap-2">
-            <Button onClick={onNextDay} disabled={!isReplay} size="sm">
+            <Button id="wt-next-day" onClick={onNextDay} disabled={!isReplay} size="sm">
               <Play className="mr-2 h-4 w-4" />
               翌日へ進む
             </Button>
@@ -119,10 +121,10 @@ export function TradePanel({
         </div>
         <Separator className="my-2"/>
         <div className="grid grid-cols-2 gap-2 mb-1">
-          <Button onClick={() => onTrade('long')} disabled={!isReplay} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-2">
+          <Button id="wt-trade-long" onClick={() => onTrade('long')} disabled={!isReplay} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-2">
             <ArrowUp className="mr-1 h-4 w-4" /> 買い
           </Button>
-          <Button onClick={() => onTrade('short')} disabled={!isReplay || !userData?.isPremium} className="bg-red-600 hover:bg-red-700 text-white h-8 px-2">
+          <Button id="wt-trade-short" onClick={() => onTrade('short')} disabled={!isReplay || (!userData?.isPremium && !isDemoData)} className="bg-red-600 hover:bg-red-700 text-white h-8 px-2">
             <ArrowDown className="mr-1 h-4 w-4" /> 空売り
           </Button>
         </div>
@@ -144,7 +146,7 @@ export function TradePanel({
         </div>
 
         <div className="flex-grow flex flex-col min-h-0 mt-2">
-            <h3 className="text-md font-semibold">保有ポジション</h3>
+            <h3 id="wt-positions" className="text-md font-semibold">保有ポジション</h3>
             <ScrollArea className="flex-grow mt-1">
                 <Table>
                     <TableHeader>

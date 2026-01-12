@@ -24,6 +24,7 @@ export interface ControlPanelProps {
   onMacdToggle: () => void;
   volumeConfig: VolumeConfig;
   onVolumeToggle: () => void;
+  isDemoData?: boolean;
 }
 
 export function ControlPanel({
@@ -39,12 +40,14 @@ export function ControlPanel({
   onMacdToggle,
   volumeConfig,
   onVolumeToggle,
+  isDemoData = false,
 }: ControlPanelProps) {
   const { userData } = useAuth();
   const isPremium = userData?.isPremium;
+  const isEnabled = isPremium || isDemoData;
 
   const PremiumFeature = ({ children, featureName }: { children: React.ReactNode, featureName: string }) => {
-    if (isPremium) {
+    if (isEnabled) {
       return <>{children}</>;
     }
     return (
@@ -105,16 +108,16 @@ export function ControlPanel({
               <div className="flex items-center justify-between">
                 <Label
                   htmlFor={`ma-toggle-${config.period}`}
-                  className={`text-base ${!isPremium ? 'text-muted-foreground' : ''}`}
-                  style={{ color: isPremium ? config.color : undefined }}
+                  className={`text-base ${!isEnabled ? 'text-muted-foreground' : ''}`}
+                  style={{ color: isEnabled ? config.color : undefined }}
                 >
                   {config.period}日 MA
                 </Label>
                 <Switch
                   id={`ma-toggle-${config.period}`}
-                  checked={isPremium && config.visible}
+                  checked={isEnabled && config.visible}
                   onCheckedChange={() => onMaToggle(config.period.toString())}
-                  disabled={!isPremium}
+                  disabled={!isEnabled}
                 />
               </div>
             </PremiumFeature>
@@ -134,29 +137,29 @@ export function ControlPanel({
           <Separator />
           <PremiumFeature featureName="RSI">
             <div className="flex items-center justify-between">
-              <Label htmlFor="rsi-toggle" className={`text-base ${!isPremium ? 'text-muted-foreground' : ''}`}>
+              <Label htmlFor="rsi-toggle" className={`text-base ${!isEnabled ? 'text-muted-foreground' : ''}`}>
                 <AreaChart className="inline-block mr-2 h-4 w-4" />
                 RSI
               </Label>
               <Switch
                 id="rsi-toggle"
-                checked={isPremium && rsiConfig.visible}
+                checked={isEnabled && rsiConfig.visible}
                 onCheckedChange={onRsiToggle}
-                disabled={!isPremium}
+                disabled={!isEnabled}
               />
             </div>
           </PremiumFeature>
           <PremiumFeature featureName="MACD">
             <div className="flex items-center justify-between">
-              <Label htmlFor="macd-toggle" className={`text-base ${!isPremium ? 'text-muted-foreground' : ''}`}>
+              <Label htmlFor="macd-toggle" className={`text-base ${!isEnabled ? 'text-muted-foreground' : ''}`}>
                 <BarChart className="inline-block mr-2 h-4 w-4" />
                 MACD
               </Label>
               <Switch
                 id="macd-toggle"
-                checked={isPremium && macdConfig.visible}
+                checked={isEnabled && macdConfig.visible}
                 onCheckedChange={onMacdToggle}
-                disabled={!isPremium}
+                disabled={!isEnabled}
               />
             </div>
           </PremiumFeature>

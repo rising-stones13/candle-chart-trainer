@@ -27,6 +27,7 @@ export default function Home() {
     onMacdToggle: () => dispatch({ type: 'TOGGLE_MACD' }),
     volumeConfig: state.volumeConfig,
     onVolumeToggle: () => dispatch({ type: 'TOGGLE_VOLUME' }),
+    isDemoData: state.isDemoData,
   };
 
   if (loading) {
