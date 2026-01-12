@@ -1,0 +1,30 @@
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: candle-chart-trainer
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: candle-chart-trainer.firebaseapp.com
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: candle-chart-trainer.appspot.com
+  # 他のパブリック変数は必要に応じて追加
+
+secrets:
+  - variable: FIREBASE_PROJECT_ID
+    secret: FIREBASE_PROJECT_ID
+  - variable: FIREBASE_CLIENT_EMAIL
+    secret: FIREBASE_CLIENT_EMAIL
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
+  - variable: STRIPE_SECRET_KEY
+    secret: STRIPE_SECRET_KEY
+  - variable: STRIPE_WEBHOOK_SECRET
+    secret: STRIPE_WEBHOOK_SECRET
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
+  - variable: NEXT_PUBLIC_STRIPE_PREMIUM_PRICE_ID
+    secret: NEXT_PUBLIC_STRIPE_PREMIUM_PRICE_ID
