@@ -23,9 +23,6 @@ export default function ChartTradeTrainer() {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [chartKey, setChartKey] = useState(0);
-  
-  // Walkthrough State
-  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   // Define walkthrough steps
   const steps: WalkthroughStep[] = useMemo(() => [
@@ -120,7 +117,7 @@ export default function ChartTradeTrainer() {
         const hasSeenWalkthrough = localStorage.getItem('hasSeenWalkthrough');
         if (!hasSeenWalkthrough) {
             // 少し待ってから表示
-            setTimeout(() => setIsWalkthroughOpen(true), 1000);
+            setTimeout(() => dispatch({ type: 'TOGGLE_WALKTHROUGH', payload: true }), 1000);
         }
 
       } catch (error) {
@@ -134,7 +131,7 @@ export default function ChartTradeTrainer() {
   }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const handleWalkthroughComplete = () => {
-      setIsWalkthroughOpen(false);
+      dispatch({ type: 'TOGGLE_WALKTHROUGH', payload: false });
       localStorage.setItem('hasSeenWalkthrough', 'true');
   };
 
@@ -241,14 +238,14 @@ export default function ChartTradeTrainer() {
     return state.chartTitle.includes('デモ株式会社') || state.chartTitle.includes('サンプルデータ');
   }, [state.chartTitle]);
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] h-full overflow-hidden">
+    <div className="grid grid-cols-1 grid-rows-[55fr_45fr] lg:grid-rows-1 lg:grid-cols-[1fr_340px] h-full overflow-hidden">
       <WalkthroughGuide 
         steps={steps} 
-        isOpen={isWalkthroughOpen} 
-        onClose={() => setIsWalkthroughOpen(false)}
+        isOpen={state.isWalkthroughOpen} 
+        onClose={() => dispatch({ type: 'TOGGLE_WALKTHROUGH', payload: false })}
         onComplete={handleWalkthroughComplete}
       />
-      <div className="flex flex-col h-full min-h-0 border-r">
+      <div className="flex flex-col h-full min-h-0 border-r border-b lg:border-b-0">
         <header className="p-2 border-b flex items-center gap-2 flex-shrink-0">
             <TooltipProvider>
                 <Tooltip>
@@ -269,9 +266,6 @@ export default function ChartTradeTrainer() {
             <div className="border-l h-6 mx-2"></div>
             <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>
             <div className="flex items-center gap-2 ml-auto">
-                <Button variant="ghost" size="icon" onClick={() => setIsWalkthroughOpen(true)} title="ツアーを開始">
-                    <HelpCircle className="h-4 w-4" />
-                </Button>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} disabled={isLoading} />
                 <Button id="wt-file-open" onClick={() => fileInputRef.current?.click()} disabled={isLoading} size="sm">
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderOpen className="mr-2 h-4 w-4" />}

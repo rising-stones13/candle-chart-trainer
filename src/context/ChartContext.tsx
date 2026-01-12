@@ -23,6 +23,8 @@ interface AppState {
   showWeeklyChart: boolean;
   upColor: string;
   downColor: string;
+  isDemoData: boolean;
+  isWalkthroughOpen: boolean;
 }
 
 // Define the actions
@@ -73,6 +75,7 @@ const initialState: AppState = {
   upColor: '#ef5350',
   downColor: '#26a69a',
   isDemoData: false,
+  isWalkthroughOpen: false,
 };
 
 // Reducer function
@@ -268,6 +271,8 @@ function chartReducer(state: AppState, action: Action): AppState {
     }
     case 'TOGGLE_WEEKLY_CHART':
       return { ...state, showWeeklyChart: !state.showWeeklyChart };
+    case 'TOGGLE_WALKTHROUGH':
+      return { ...state, isWalkthroughOpen: action.payload !== undefined ? action.payload : !state.isWalkthroughOpen };
     case 'TOGGLE_MA': {
       const id = action.payload;
       if (!state.maConfigs[id]) return state;

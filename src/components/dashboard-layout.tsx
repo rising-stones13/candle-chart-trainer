@@ -21,7 +21,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge"; // <-- 1. Import Badge
 import { useAuth } from '@/context/AuthContext';
-import { Home, LineChart, Settings, SlidersHorizontal, LogOut, Menu, CircleHelp, FileText, Shield, Scale } from 'lucide-react';
+import { useChart } from '@/context/ChartContext';
+import { Home, LineChart, Settings, SlidersHorizontal, LogOut, Menu, CircleHelp, FileText, Shield, Scale, HelpCircle } from 'lucide-react';
 import { ControlPanel, ControlPanelProps } from './control-panel';
 import { SettingsPanel } from './settings-panel';
 import { usePathname } from 'next/navigation';
@@ -37,6 +38,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, controlPanelProps }: DashboardLayoutProps) {
   const { user, userData, logOut } = useAuth();
+  const { dispatch } = useChart();
   const pathname = usePathname();
   const { toast } = useToast();
   const [isChartSettingsDrawerOpen, setIsChartSettingsDrawerOpen] = useState(false);
@@ -123,28 +125,6 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
         <CircleHelp className="h-4 w-4" />
         ヘルプ
       </Link>
-      <div className="my-2 border-t border-muted" />
-      <Link
-        href="/terms"
-        onClick={() => setIsMobileNavOpen(false)}
-        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/terms' ? 'bg-muted' : ''}`}>
-        <FileText className="h-4 w-4" />
-        利用規約
-      </Link>
-      <Link
-        href="/privacy"
-        onClick={() => setIsMobileNavOpen(false)}
-        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/privacy' ? 'bg-muted' : ''}`}>
-        <Shield className="h-4 w-4" />
-        プライバシーポリシー
-      </Link>
-      <Link
-        href="/legal"
-        onClick={() => setIsMobileNavOpen(false)}
-        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/legal' ? 'bg-muted' : ''}`}>
-        <Scale className="h-4 w-4" />
-        特定商取引法
-      </Link>
       {showChartSettings && controlPanelProps && (
          <Button variant="ghost" onClick={handleChartSettingsOpen} className="flex items-center gap-3 justify-start rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary mt-2">
             <SlidersHorizontal className="h-4 w-4" />
@@ -152,6 +132,32 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
         </Button>
       )}
     </nav>
+  );
+
+  const LegalLinks = () => (
+    <div className="flex flex-col gap-1 px-2 lg:px-4 py-2 border-t">
+      <Link
+        href="/terms"
+        onClick={() => setIsMobileNavOpen(false)}
+        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm font-medium">
+        <FileText className="h-4 w-4" />
+        利用規約
+      </Link>
+      <Link
+        href="/privacy"
+        onClick={() => setIsMobileNavOpen(false)}
+        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm font-medium">
+        <Shield className="h-4 w-4" />
+        プライバシーポリシー
+      </Link>
+      <Link
+        href="/legal"
+        onClick={() => setIsMobileNavOpen(false)}
+        className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm font-medium">
+        <Scale className="h-4 w-4" />
+        特定商取引法
+      </Link>
+    </div>
   );
 
   return (
@@ -168,8 +174,9 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
             <NavContent />
           </div>
            <div className="mt-auto p-4">
+             <LegalLinks />
              {!userData?.isPremium && (
-               <div className="p-4 mb-4 bg-orange-100 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl">
+               <div className="p-4 mb-4 bg-orange-100 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl mt-4">
                     <h3 className="font-semibold text-orange-900 dark:text-orange-100">プレミアムにアップグレード</h3>
                     <p className="text-sm text-orange-700 dark:text-orange-300 mt-2">全ての機能にアクセスしましょう。</p>
                     <Button size="sm" className="w-full mt-4" asChild>
@@ -198,7 +205,7 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
                 </div>
                 <div className="mt-auto p-4 border-t">
                     {!userData?.isPremium && (
-                       <div className="p-4 bg-orange-100 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl">
+                       <div className="p-4 bg-orange-100 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl mb-4">
                             <h3 className="font-semibold text-orange-900 dark:text-orange-100">プレミアムへ</h3>
                             <p className="text-sm text-orange-700 dark:text-orange-300 mt-2">全機能にアクセス</p>
                             <Button size="sm" className="w-full mt-4" asChild>
@@ -206,11 +213,33 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
                             </Button>
                        </div>
                     )}
+                    <LegalLinks />
                 </div>
             </SheetContent>
           </Sheet>
 
           <div className="w-full flex-1"></div>
+
+          {/* 操作方法を見るボタン */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => dispatch({ type: 'TOGGLE_WALKTHROUGH', payload: true })}
+            className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-primary mr-2"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span>操作方法を見る</span>
+          </Button>
+
+          {/* モバイル用アイコンのみ */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => dispatch({ type: 'TOGGLE_WALKTHROUGH', payload: true })}
+            className="md:hidden text-muted-foreground hover:text-primary mr-1"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
 
           {/* 2. Add Plan Badge */}
           {userData && (

@@ -120,7 +120,7 @@ export function TradePanel({
           </div>
         </div>
         <Separator className="my-2"/>
-        <div className="grid grid-cols-2 gap-2 mb-1">
+        <div className="grid grid-cols-2 gap-2 mb-2">
           <Button id="wt-trade-long" onClick={() => onTrade('long')} disabled={!isReplay} className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-2">
             <ArrowUp className="mr-1 h-4 w-4" /> 買い
           </Button>
@@ -129,23 +129,22 @@ export function TradePanel({
           </Button>
         </div>
         
-        <div className="grid grid-cols-2 gap-1 mb-1">
-            <div className="rounded-md bg-muted p-1">
-                <div className="text-xs text-muted-foreground">評価損益</div>
-                <div className={`font-bold ${unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(unrealizedPL)}</div>
+        <div className="grid grid-cols-3 gap-1 mb-2 text-center">
+            <div className="rounded-md bg-muted p-1 flex flex-col justify-center">
+                <div className="text-[10px] text-muted-foreground">評価損益</div>
+                <div className={`text-xs font-bold ${unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(unrealizedPL)}</div>
             </div>
-            <div className="rounded-md bg-muted p-1">
-                <div className="text-xs text-muted-foreground">確定損益</div>
-                <div className={`font-bold ${realizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(realizedPL)}</div>
+            <div className="rounded-md bg-muted p-1 flex flex-col justify-center">
+                <div className="text-[10px] text-muted-foreground">確定損益</div>
+                <div className={`text-xs font-bold ${realizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(realizedPL)}</div>
+            </div>
+            <div className="rounded-md bg-card-foreground p-1 flex flex-col justify-center text-background">
+                <div className="text-[10px]">合計</div>
+                <div className={`text-xs font-bold ${totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{formatCurrency(totalPL)}</div>
             </div>
         </div>
 
-        <div className="rounded-lg text-center bg-card-foreground text-background">
-            <div className="text-xs">合計損益</div>
-            <div className={`text-xl font-bold ${totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{formatCurrency(totalPL)}</div>
-        </div>
-
-        <div className="flex-grow flex flex-col min-h-0 mt-2">
+        <div className="flex-grow flex flex-col min-h-0">
             <h3 id="wt-positions" className="text-md font-semibold">保有ポジション</h3>
             <ScrollArea className="flex-grow mt-1">
                 <Table>
