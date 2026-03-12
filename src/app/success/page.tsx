@@ -44,7 +44,7 @@ export default function SuccessPage() {
       <p className="text-muted-foreground mb-8 text-center max-w-md">
         プレミアムプランへの登録処理を行っています。この処理は通常数秒で完了します。この画面を閉じないでください。
       </p>
-      <Link to="/" passHref>
+      <Link to="/">
         <Button variant="outline" size="sm">ホームに戻る</Button>
       </Link>
     </div>

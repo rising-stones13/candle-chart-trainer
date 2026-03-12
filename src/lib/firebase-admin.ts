@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp, App, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
-import { getSecrets } from './secrets.js';
+import { getSecrets } from './secrets';
 
 // 初期化処理をPromiseとして保持するための変数
 let adminAppPromise: Promise<App> | null = null;

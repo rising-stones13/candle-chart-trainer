@@ -260,7 +260,7 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
              <DropdownMenuContent align="end">
               <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <Link to="/settings" passHref>
+              <Link to="/settings">
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4"/>
                   <span>アカウント設定</span>

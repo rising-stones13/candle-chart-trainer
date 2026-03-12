@@ -7,8 +7,8 @@ import morgan from 'morgan';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
-import { getFirebaseAdmin } from '../lib/firebase-admin.js';
-import { getSecrets } from '../lib/secrets.js';
+import { getFirebaseAdmin } from '../lib/firebase-admin';
+import { getSecrets } from '../lib/secrets';
 import { Resend } from 'resend';
 
 // .env 読み込み
@@ -19,12 +19,13 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 // IDXなどの環境でPORTが設定されている場合、Viteと競合するため開発環境では3001を優先する
-const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3001) : 3001;
+const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3001) : 3005;
 
 // ミドルウェア
 app.use(morgan('dev'));
 app.use(helmet({
   contentSecurityPolicy: false,
+  crossOriginOpenerPolicy: false,
 }));
 app.use(compression());
 app.use(cors());
@@ -147,13 +148,22 @@ app.post('/api/sync-stripe-status', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : null;
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    if (!token) {
+      console.warn('[sync-stripe-status] No token provided');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const { auth, db } = await getFirebaseAdmin();
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
+    console.log(`[sync-stripe-status] Syncing for user: ${userId}`);
 
     const secrets = await getSecrets();
+    if (!secrets['STRIPE_SECRET_KEY']) {
+      console.error('[sync-stripe-status] Missing STRIPE_SECRET_KEY');
+      return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
+    }
+    
     const stripe = new Stripe(secrets['STRIPE_SECRET_KEY'], { apiVersion: '2025-01-27.acacia' as any });
 
     const userRef = db.collection('users').doc(userId);
@@ -161,6 +171,7 @@ app.post('/api/sync-stripe-status', async (req, res) => {
     let customerId = userData?.stripeCustomerId;
 
     if (!customerId && userData?.email) {
+      console.log(`[sync-stripe-status] Looking up Stripe customer for email: ${userData.email}`);
       const customers = await stripe.customers.list({ email: userData.email, limit: 1 });
       if (customers.data.length > 0) {
         customerId = customers.data[0].id;
@@ -169,6 +180,7 @@ app.post('/api/sync-stripe-status', async (req, res) => {
     }
 
     if (customerId) {
+      console.log(`[sync-stripe-status] Fetching subscriptions for customer: ${customerId}`);
       const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
       if (subscriptions.data.length > 0) {
         const sub = subscriptions.data[0];
@@ -183,16 +195,21 @@ app.post('/api/sync-stripe-status', async (req, res) => {
     }
     res.json({ message: 'Synced' });
   } catch (error: any) {
+    console.error('[sync-stripe-status] CRITICAL ERROR:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 app.post('/api/cancel-subscription', async (req, res) => {
   try {
-    const { userId } = req.body;
-    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : null;
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { db } = await getFirebaseAdmin();
+    const { auth, db } = await getFirebaseAdmin();
+    const decodedToken = await auth.verifyIdToken(token);
+    const userId = decodedToken.uid;
+
     const secrets = await getSecrets();
     const stripe = new Stripe(secrets['STRIPE_SECRET_KEY'], { apiVersion: '2025-01-27.acacia' as any });
     const resend = new Resend(secrets['RESEND_API_KEY']);
@@ -228,10 +245,14 @@ app.post('/api/cancel-subscription', async (req, res) => {
 
 app.post('/api/delete-account', async (req, res) => {
   try {
-    const { userId } = req.body;
-    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : null;
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     const { auth, db } = await getFirebaseAdmin();
+    const decodedToken = await auth.verifyIdToken(token);
+    const userId = decodedToken.uid;
+
     await db.collection('users').doc(userId).delete();
     await auth.deleteUser(userId);
     res.json({ success: true });
@@ -241,6 +262,7 @@ app.post('/api/delete-account', async (req, res) => {
 });
 
 app.get('/api/check-env', async (req, res) => {
+  console.log('GET /api/check-env requested');
   const secrets = await getSecrets();
   res.json({
     FIREBASE_PROJECT_ID: !!secrets.FIREBASE_PROJECT_ID,
@@ -251,15 +273,18 @@ app.get('/api/check-env', async (req, res) => {
 });
 
 const distPath = path.resolve(__dirname, '../../dist/client');
+console.log(`Static files path: ${distPath}`);
 app.use(express.static(distPath));
 
 app.get('*', (req, res) => {
+  console.log(`GET * requested: ${req.path}`);
   if (req.path.startsWith('/api')) {
-    return res.status(404).json({ error: 'Not Found' });
+    return res.status(404).json({ error: 'Not Found', path: req.path });
   }
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
 });
