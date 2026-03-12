@@ -1,11 +1,10 @@
-'use client';
 
 import DashboardLayout from '@/components/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, FileText } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 export default function TermsPage() {
@@ -39,9 +38,9 @@ export default function TermsPage() {
                         <p>当サービスは，ユーザーが自ら用意した株価データファイルをブラウザ上で可視化し，それを用いたデモトレード（シミュレーション）機能を提供するツールです。</p>
                         <ul className="list-disc pl-5 mt-2 space-y-1">
                             <li>当サービスは，現実の株式市場への注文発注や売買執行など，現実の投資機能を提供するものではありません。</li>
-                            <li>当サービスの一部機能は有料であり，サブスクリプション（定額制プラン）を購入することにより利用可能となります。有料機能の具体的な内容は，<Link href="/pricing" className="underline hover:text-primary">プレミアムプラン購入画面</Link>に記載の通りとします。</li>
+                            <li>当サービスの一部機能は有料であり，サブスクリプション（定額制プラン）を購入することにより利用可能となります。有料機能の具体的な内容は，<Link to="/pricing" className="underline hover:text-primary">プレミアムプラン購入画面</Link>に記載の通りとします。</li>
                             <li>当サービスは，ユーザーに対し株価データそのものを提供することはありません。</li>
-                            <li>本アプリで利用可能な株価データの形式は，当サービス内の<Link href="/help" className="underline hover:text-primary">ヘルプページ</Link>に記載されている仕様に準拠している必要があります。</li>
+                            <li>本アプリで利用可能な株価データの形式は，当サービス内の<Link to="/help" className="underline hover:text-primary">ヘルプページ</Link>に記載されている仕様に準拠している必要があります。</li>
                             <li>ユーザーが読み込んだ株価データファイルはブラウザのメモリ上でのみ処理され，当サービスのサーバーにアップロードまたは保存されることはありません。</li>
                             <li>データのバックアップや管理はユーザー自身の責任において行うものとします。</li>
                         </ul>
@@ -109,16 +108,16 @@ export default function TermsPage() {
     return (
       <div className="min-h-screen bg-background">
          <header className="border-b p-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-lg hover:text-primary transition-colors">
+          <Link to="/" className="flex items-center gap-2 font-semibold text-lg hover:text-primary transition-colors">
             <ArrowLeft className="h-5 w-5" />
             トップへ戻る
           </Link>
           <div className="flex gap-4">
             <Button asChild variant="ghost">
-              <Link href="/login">ログイン</Link>
+              <Link to="/login">ログイン</Link>
             </Button>
             <Button asChild>
-              <Link href="/signup">新規登録</Link>
+              <Link to="/signup">新規登録</Link>
             </Button>
           </div>
         </header>

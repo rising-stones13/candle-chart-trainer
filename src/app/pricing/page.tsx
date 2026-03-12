@@ -1,9 +1,8 @@
-'use client';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useNavigate as useRouter } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -21,7 +20,7 @@ export default function PricingPage() {
         description: "プレミアム機能を利用するにはログインが必要です。",
         variant: "destructive",
       });
-      router.push('/login');
+      router('/login');
       return;
     }
 
@@ -45,7 +44,7 @@ export default function PricingPage() {
       if (response.ok) {
         const session = await response.json();
         if (session.url) {
-          router.push(session.url);
+          router(session.url);
         } else {
           // This case should ideally not happen if the API is consistent
           throw new Error('Checkout session URL not found in response.');
@@ -116,7 +115,7 @@ export default function PricingPage() {
         </Card>
       </div>
       <div className="mt-8">
-        <Link href="/" className="text-sm text-muted-foreground hover:underline">
+        <Link to="/" className="text-sm text-muted-foreground hover:underline">
           ホームに戻る
         </Link>
       </div>

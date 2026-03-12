@@ -1,8 +1,7 @@
-'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavigate as useRouter } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -19,7 +18,7 @@ export default function SuccessPage() {
       if (userData?.isPremium) {
         setMessage('ありがとうございます！ホーム画面に移動します...');
         const redirectTimeout = setTimeout(() => {
-          router.push('/');
+          router('/');
         }, 2000);
         return () => clearTimeout(redirectTimeout);
       }
@@ -45,7 +44,7 @@ export default function SuccessPage() {
       <p className="text-muted-foreground mb-8 text-center max-w-md">
         プレミアムプランへの登録処理を行っています。この処理は通常数秒で完了します。この画面を閉じないでください。
       </p>
-      <Link href="/" passHref>
+      <Link to="/" passHref>
         <Button variant="outline" size="sm">ホームに戻る</Button>
       </Link>
     </div>

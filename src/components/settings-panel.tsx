@@ -1,9 +1,8 @@
-'use client';
 
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
+import { useNavigate as useRouter } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -54,7 +53,7 @@ export function SettingsPanel() {
         title: "アカウントが削除されました",
         description: "ご利用ありがとうございました。",
       });
-      router.push('/');
+      router('/');
     } catch (error: any) {
       console.error("Error deleting account:", error);
       toast({

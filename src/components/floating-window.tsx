@@ -1,4 +1,3 @@
-'use client';
 
 import React, { useState, useRef, useEffect, type ReactNode } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';

@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp, App, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
-import { getSecrets } from './secrets';
+import { getSecrets } from './secrets.js';
 
 // 初期化処理をPromiseとして保持するための変数
 let adminAppPromise: Promise<App> | null = null;
@@ -35,7 +35,6 @@ const getAppInstance = async (): Promise<App> => {
 
 /**
  * FirestoreとAuthのインスタンスを返す関数。
- * 競合状態を防ぎ、常に単一のインスタンスを返す。
  */
 export const getFirebaseAdmin = async (): Promise<{ db: Firestore; auth: Auth }> => {
   if (!adminAppPromise) {

@@ -1,7 +1,6 @@
-'use client';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate as useRouter } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useChart } from '@/context/ChartContext'; // Import the new context
@@ -202,7 +201,7 @@ export default function ChartTradeTrainer() {
         title: 'プレミアム機能',
         description: '週足チャートの表示はプレミアムプランで利用できます。',
         action: (
-          <Button variant="premium" size="sm" onClick={() => router.push('/pricing')}>
+          <Button variant="premium" size="sm" onClick={() => router('/pricing')}>
             アップグレード
           </Button>
         ),

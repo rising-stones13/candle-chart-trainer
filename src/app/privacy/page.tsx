@@ -1,11 +1,10 @@
-'use client';
 
 import DashboardLayout from '@/components/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 export default function PrivacyPage() {
@@ -75,16 +74,16 @@ export default function PrivacyPage() {
     return (
       <div className="min-h-screen bg-background">
          <header className="border-b p-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-lg hover:text-primary transition-colors">
+          <Link to="/" className="flex items-center gap-2 font-semibold text-lg hover:text-primary transition-colors">
             <ArrowLeft className="h-5 w-5" />
             トップへ戻る
           </Link>
           <div className="flex gap-4">
             <Button asChild variant="ghost">
-              <Link href="/login">ログイン</Link>
+              <Link to="/login">ログイン</Link>
             </Button>
             <Button asChild>
-              <Link href="/signup">新規登録</Link>
+              <Link to="/signup">新規登録</Link>
             </Button>
           </div>
         </header>

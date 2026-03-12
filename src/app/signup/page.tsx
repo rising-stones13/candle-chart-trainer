@@ -1,12 +1,11 @@
-'use client';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from 'next/navigation';
+import { useNavigate as useRouter } from 'react-router-dom';
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,7 +24,7 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       await signUp(email, password);
-      router.push('/'); // 登録成功後、ホームページにリダイレクト
+      router('/'); // 登録成功後、ホームページにリダイレクト
     } catch (error: any) {
       console.error(error);
       toast({ 
@@ -42,7 +41,7 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       await logInWithGoogle();
-      router.push('/'); // 成功後、ホームページにリダイレクト
+      router('/'); // 成功後、ホームページにリダイレクト
     } catch (error: any) {
       console.error(error);
       toast({ 
@@ -92,7 +91,7 @@ export default function SignUpPage() {
           </form>
           <div className="mt-4 text-center text-sm">
             すでにアカウントをお持ちですか？{" "}
-            <Link href="/login" className="underline">
+            <Link to="/login" className="underline">
               ログイン
             </Link>
           </div>

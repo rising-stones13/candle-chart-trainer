@@ -1,4 +1,3 @@
-'use client';
 
 import { 
   createContext, 
@@ -9,7 +8,7 @@ import {
   useCallback,
   ReactNode 
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate as useRouter } from 'react-router-dom';
 import { 
   onAuthStateChanged, 
   User, 

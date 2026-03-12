@@ -1,4 +1,3 @@
-'use client';
 
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { CandleData, MAConfig, RSIConfig, MACDConfig, VolumeConfig, Position, Trade } from '@/types';

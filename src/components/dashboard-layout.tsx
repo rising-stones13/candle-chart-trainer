@@ -1,6 +1,5 @@
-'use client';
 
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -25,7 +24,7 @@ import { useChart } from '@/context/ChartContext';
 import { Home, LineChart, Settings, SlidersHorizontal, LogOut, Menu, CircleHelp, FileText, Shield, Scale, HelpCircle } from 'lucide-react';
 import { ControlPanel, ControlPanelProps } from './control-panel';
 import { SettingsPanel } from './settings-panel';
-import { usePathname } from 'next/navigation';
+import { useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { sendEmailVerification } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +38,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, controlPanelProps }: DashboardLayoutProps) {
   const { user, userData, logOut } = useAuth();
   const { dispatch } = useChart();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const { toast } = useToast();
   const [isChartSettingsDrawerOpen, setIsChartSettingsDrawerOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -165,7 +164,7 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
       <div className="hidden border-r bg-muted/40 md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
+            <Link to="/" className="flex items-center gap-2 font-semibold">
               <LineChart className="h-6 w-6" />
               <span className="">ChartTrade Trainer</span>
             </Link>
@@ -180,7 +179,7 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
                     <h3 className="font-semibold text-orange-900 dark:text-orange-100">プレミアムにアップグレード</h3>
                     <p className="text-sm text-orange-700 dark:text-orange-300 mt-2">全ての機能にアクセスしましょう。</p>
                     <Button size="sm" className="w-full mt-4" asChild>
-                       <Link href="/pricing">アップグレード</Link>
+                       <Link to="/pricing">アップグレード</Link>
                     </Button>
                </div>
             )}
@@ -209,7 +208,7 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
                             <h3 className="font-semibold text-orange-900 dark:text-orange-100">プレミアムへ</h3>
                             <p className="text-sm text-orange-700 dark:text-orange-300 mt-2">全機能にアクセス</p>
                             <Button size="sm" className="w-full mt-4" asChild>
-                               <Link href="/pricing" onClick={() => setIsMobileNavOpen(false)}>アップグレード</Link>
+                               <Link to="/pricing" onClick={() => setIsMobileNavOpen(false)}>アップグレード</Link>
                             </Button>
                        </div>
                     )}
@@ -261,7 +260,7 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
              <DropdownMenuContent align="end">
               <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <Link href="/settings" passHref>
+              <Link to="/settings" passHref>
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4"/>
                   <span>アカウント設定</span>

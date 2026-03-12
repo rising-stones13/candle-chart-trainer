@@ -1,9 +1,7 @@
-'use client';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useNavigate as useRouter, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,7 +28,7 @@ export default function LoginPage() {
     setError(null);
     try {
       await logIn(email, password);
-      router.push('/');
+      router('/');
     } catch (err: any) {
       setError(err.message);
       toast({
@@ -45,7 +43,7 @@ export default function LoginPage() {
     setError(null);
     try {
       await logInWithGoogle();
-      router.push('/');
+      router('/');
     } catch (err: any) {
       setError(err.message);
       toast({
@@ -149,7 +147,7 @@ export default function LoginPage() {
                   </button>
                   <p className="mt-2 text-muted-foreground">
                     アカウントをお持ちでないですか？{' '}
-                    <Link href="/signup" className="underline">
+                    <Link to="/signup" className="underline">
                       新規登録
                     </Link>
                   </p>

@@ -1,4 +1,3 @@
-'use client';
 
 import type { Position } from '@/types';
 import { Button } from '@/components/ui/button';

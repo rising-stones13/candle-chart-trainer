@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/context/AuthContext";
 import { ChartProvider } from "@/context/ChartContext";
 import { ClientProviders } from "@/components/providers/client-providers"; // 修正: ClientProvidersをインポート
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Candle Chart Trainer",
