@@ -3,7 +3,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "node",
-    "outDir": "./dist/server",
+    "outDir": "./dist",
     "rootDir": "./src",
     "allowJs": true,
     "skipLibCheck": true,
@@ -12,9 +12,10 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/server/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
-  "include": ["src/server/**/*.ts", "src/lib/**/*.ts"],
-  "exclude": ["node_modules", "src/app", "src/components"]
+  "include": ["src/server/**/*.ts", "src/shared/**/*.ts"],
+  "exclude": ["node_modules", "src/client"]
 }

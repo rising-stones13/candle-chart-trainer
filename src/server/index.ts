@@ -7,8 +7,8 @@ import morgan from 'morgan';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
-import { getFirebaseAdmin } from '../lib/firebase-admin';
-import { getSecrets } from '../lib/secrets';
+import { getFirebaseAdmin } from './lib/firebase-admin.js';
+import { getSecrets } from './lib/secrets.js';
 import { Resend } from 'resend';
 
 // .env 読み込み
