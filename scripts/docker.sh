@@ -8,6 +8,20 @@ case $COMMAND in
       echo "Error: .env file not found."
       exit 1
     fi
+    echo "🚀 Starting Docker container (using existing image)..."
+    docker compose up -d
+    echo "✅ App is starting at http://localhost:3002"
+    ;;
+  build)
+    echo "🏗️ Building Docker image..."
+    docker compose build
+    echo "✅ Build complete."
+    ;;
+  up)
+    if [ ! -f .env ]; then
+      echo "Error: .env file not found."
+      exit 1
+    fi
     echo "🚀 Building and starting Docker container..."
     docker compose up --build -d
     echo "✅ App is starting at http://localhost:3002"
@@ -23,7 +37,12 @@ case $COMMAND in
     echo "✅ Restart complete."
     ;;
   *)
-    echo "Usage: $0 {start|stop|restart}"
+    echo "Usage: $0 {start|build|up|stop|restart}"
+    echo "  start   : Start containers using existing images."
+    echo "  build   : Build or rebuild images."
+    echo "  up      : Build and start containers."
+    echo "  stop    : Stop and remove containers."
+    echo "  restart : Restart existing containers."
     exit 1
     ;;
 esac

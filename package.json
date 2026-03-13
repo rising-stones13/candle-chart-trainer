@@ -10,12 +10,14 @@
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "docker:start": "./scripts/docker.sh start",
+    "docker:build": "./scripts/docker.sh build",
+    "docker:up": "./scripts/docker.sh up",
     "docker:stop": "./scripts/docker.sh stop",
     "docker:restart": "./scripts/docker.sh restart",
     "dev:start": "./scripts/dev.sh start",
     "dev:stop": "./scripts/dev.sh stop",
     "dev:restart": "./scripts/dev.sh restart"
-  },
+    },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
     "@google-cloud/secret-manager": "^6.1.1",
