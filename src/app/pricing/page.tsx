@@ -44,7 +44,7 @@ export default function PricingPage() {
       if (response.ok) {
         const session = await response.json();
         if (session.url) {
-          router(session.url);
+          window.location.href = session.url;
         } else {
           // This case should ideally not happen if the API is consistent
           throw new Error('Checkout session URL not found in response.');

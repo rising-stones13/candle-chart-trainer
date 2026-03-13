@@ -73,9 +73,13 @@ export function SettingsPanel() {
 
     setIsCanceling(true);
     try {
+      const token = await user.getIdToken();
       const response = await fetch('/api/cancel-subscription', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId: user.uid }),
       });
 

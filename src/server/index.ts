@@ -12,7 +12,7 @@ import { getSecrets } from '../lib/secrets';
 import { Resend } from 'resend';
 
 // .env 読み込み
-dotenv.config();
+dotenv.config({ override: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,14 +23,8 @@ const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3001) 
 
 // ミドルウェア
 app.use(morgan('dev'));
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginOpenerPolicy: false,
-}));
-app.use(compression());
-app.use(cors());
 
-// --- Stripe Webhook ---
+// 1. Stripe Webhook (Must be before express.json() for raw body)
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const secrets = await getSecrets();
@@ -42,7 +36,6 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
       return res.status(500).json({ error: 'Missing secrets' });
     }
 
-    // 型エラー回避のため as any を使用するか、適切なバージョンを指定
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-01-27.acacia' as any });
     const resend = new Resend(resendApiKey);
     const { db } = await getFirebaseAdmin();
@@ -106,40 +99,63 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
   }
 });
 
-// JSON 解析を有効化
+// 2. Body parsers for other routes
 app.use(express.json());
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginOpenerPolicy: false,
+}));
+app.use(compression());
+app.use(cors());
 
 // --- API Endpoints ---
 
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
     const { userId, userEmail } = req.body;
+    console.log(`[create-checkout-session] Starting session for user: ${userId}, email: ${userEmail}`);
+    
     const secrets = await getSecrets();
+    
+    if (!secrets['STRIPE_SECRET_KEY']) {
+      console.error('[create-checkout-session] STRIPE_SECRET_KEY is missing');
+      return res.status(500).json({ error: 'STRIPE_SECRET_KEY is missing' });
+    }
+    
     const stripe = new Stripe(secrets['STRIPE_SECRET_KEY'], { apiVersion: '2025-01-27.acacia' as any });
 
+    console.log(`[create-checkout-session] Looking up customer for email: ${userEmail}`);
     const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
     let customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
+    console.log(`[create-checkout-session] Customer ID: ${customerId || 'New Customer'}`);
+
+    const baseUrl = secrets['VITE_APP_URL'] || req.headers.origin || 'http://localhost:5173';
+    const priceId = secrets['VITE_STRIPE_PREMIUM_PRICE_ID'];
+    console.log(`[create-checkout-session] Base URL: ${baseUrl}, Price ID: ${priceId}`);
+
+    if (!priceId) {
+      console.error('[create-checkout-session] Price ID is missing');
+      return res.status(500).json({ error: 'Price ID is missing' });
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
-        price_data: {
-          currency: 'jpy',
-          product_data: { name: 'プレミアムプラン' },
-          unit_amount: 980,
-          recurring: { interval: 'month' },
-        },
+        price: priceId,
         quantity: 1,
       }],
       mode: 'subscription',
-      success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/pricing`,
+      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/pricing`,
       metadata: { userId, userEmail },
       customer: customerId,
       customer_email: customerId ? undefined : userEmail,
     });
+    console.log(`[create-checkout-session] Session created: ${session.id}`);
     res.json({ url: session.url });
   } catch (error: any) {
+    console.error('[create-checkout-session] ERROR:', error);
     res.status(500).json({ error: error.message });
   }
 });
