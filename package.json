@@ -9,12 +9,12 @@
     "start": "NODE_ENV=production node dist/server/index.js",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "docker:start": "./scripts/start-docker.sh",
-    "docker:stop": "./scripts/stop-docker.sh",
-    "docker:restart": "./scripts/restart-docker.sh",
-    "dev:start": "./scripts/start-dev.sh",
-    "dev:stop": "./scripts/stop-dev.sh",
-    "dev:restart": "./scripts/restart-dev.sh"
+    "docker:start": "./scripts/docker.sh start",
+    "docker:stop": "./scripts/docker.sh stop",
+    "docker:restart": "./scripts/docker.sh restart",
+    "dev:start": "./scripts/dev.sh start",
+    "dev:stop": "./scripts/dev.sh stop",
+    "dev:restart": "./scripts/dev.sh restart"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
