@@ -10,7 +10,7 @@ case $COMMAND in
     fi
     echo "🚀 Starting Docker container (using existing image)..."
     docker compose up -d
-    echo "✅ App is starting at http://localhost:3000"
+    echo "✅ App is starting at http://localhost:3006"
     ;;
   build)
     echo "🏗️ Building Docker image..."
@@ -24,7 +24,7 @@ case $COMMAND in
     fi
     echo "🚀 Building and starting Docker container..."
     docker compose up --build -d
-    echo "✅ App is starting at http://localhost:3000"
+    echo "✅ App is starting at http://localhost:3006"
     ;;
   stop)
     echo "🛑 Stopping and removing Docker containers..."
