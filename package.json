@@ -10,7 +10,11 @@
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "docker:start": "./scripts/start-docker.sh",
-    "dev:start": "./scripts/start-dev.sh"
+    "docker:stop": "./scripts/stop-docker.sh",
+    "docker:restart": "./scripts/restart-docker.sh",
+    "dev:start": "./scripts/start-dev.sh",
+    "dev:stop": "./scripts/stop-dev.sh",
+    "dev:restart": "./scripts/restart-dev.sh"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
