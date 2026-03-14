@@ -130,7 +130,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
     let customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
     console.log(`[create-checkout-session] Customer ID: ${customerId || 'New Customer'}`);
 
-    const baseUrl = secrets['VITE_APP_URL'] || req.headers.origin || 'http://localhost:5173';
+    const baseUrl = secrets['VITE_APP_URL'] || req.headers.origin || 'http://localhost:3000';
     const priceId = secrets['VITE_STRIPE_PREMIUM_PRICE_ID'];
     console.log(`[create-checkout-session] Base URL: ${baseUrl}, Price ID: ${priceId}`);
 
