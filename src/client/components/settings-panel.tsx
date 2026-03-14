@@ -122,11 +122,16 @@ export function SettingsPanel() {
           </div>
           <div>
             <p className="text-sm font-medium">現在のプラン:</p>
-            {userData?.isPremium ? (
-              <Badge variant="premium" className="text-base px-3 py-1">プレミアムプラン</Badge>
-            ) : (
-              <Badge variant="secondary" className="text-base px-3 py-1">フリープラン</Badge>
-            )}
+            <div className="flex items-center gap-4 mt-1">
+              {userData?.isPremium ? (
+                <Badge variant="premium" className="text-base px-3 py-1">プレミアムプラン</Badge>
+              ) : (
+                <>
+                  <Badge variant="secondary" className="text-base px-3 py-1">フリープラン</Badge>
+                  <Button size="sm" onClick={() => router('/pricing')}>プレミアムにアップグレード</Button>
+                </>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
