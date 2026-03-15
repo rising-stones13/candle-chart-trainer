@@ -37,18 +37,8 @@ export function SettingsPanel() {
   }, [userData, isCanceling, toast]);
 
   const handleDeleteAccount = async () => {
-    if (userData?.isPremium) {
-      toast({
-        variant: "destructive",
-        title: "アカウントを削除できません",
-        description: "プレミアムプランを解除してからアカウントを削除してください。",
-      });
-      setIsDeleteDialogOpen(false);
-      return;
-    }
-
     try {
-      await deleteAccount();
+      await deleteAccount(userData?.isPremium);
       toast({
         title: "アカウントが削除されました",
         description: "ご利用ありがとうございました。",
@@ -147,34 +137,47 @@ export function SettingsPanel() {
           <CardContent className="space-y-4">
              {userData.currentPeriodEnd && (
                 <div>
-                  <p className="text-sm font-medium">現在の契約期間終了日:</p>
+                  <p className="text-sm font-medium">
+                    {userData.cancelAtPeriodEnd ? 'プラン終了予定日:' : '次回更新予定日:'}
+                  </p>
                   <p className="text-lg">
                     {new Date(userData.currentPeriodEnd * 1000).toLocaleDateString()}
                   </p>
+                  {userData.cancelAtPeriodEnd && (
+                    <p className="text-sm text-destructive mt-1">
+                      ※解約手続き済みです。期間終了までプレミアム機能をご利用いただけます。
+                    </p>
+                  )}
                 </div>
               )}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                {/* ▼▼▼ 【修正】ボタンのvariantを`destructive`に変更 ▼▼▼ */}
-                <Button variant="destructive" disabled={isCanceling}>
-                  {isCanceling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> 解除処理中...</> : 'プレミアムプランを解除する'}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>本当にプレミアムプランを解除しますか？</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    この操作を行うと、現在の契約期間の終了をもってサブスクリプションが停止されます。期間終了までは引き続きプレミアム機能をご利用いただけます。
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleCancelSubscription} disabled={isCanceling} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    解除する
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            
+            {!userData.cancelAtPeriodEnd ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={isCanceling}>
+                    {isCanceling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> 解除処理中...</> : 'プレミアムプランを解除する'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>本当にプレミアムプランを解除しますか？</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      この操作を行うと、現在の契約期間の終了をもってサブスクリプションが停止されます。期間終了までは引き続きプレミアム機能をご利用いただけます。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleCancelSubscription} disabled={isCanceling} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      解除する
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : (
+              <Button variant="outline" disabled className="w-full sm:w-auto">
+                解約手続き済み
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
@@ -195,13 +198,18 @@ export function SettingsPanel() {
               <AlertDialogHeader>
                 <AlertDialogTitle>本当にアカウントを削除しますか？</AlertDialogTitle>
                 <AlertDialogDescription>
-                  この操作は取り消せません。現在アクティブなサブスクリプションがある場合、まずそちらを解除してください。
+                  この操作は取り消せません。アカウントに関連するすべてのデータが完全に削除されます。
+                  {userData?.isPremium && (
+                    <p className="mt-2 font-bold text-destructive">
+                      ※現在プレミアムプランにご加入中ですが、退会と同時にサブスクリプションも解除されます。よろしいですか？
+                    </p>
+                  )}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>キャンセル</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  削除
+                  同意して削除
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -29,6 +29,7 @@ interface UserData {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   currentPeriodEnd?: number;
+  cancelAtPeriodEnd?: boolean;
 }
 
 interface AuthContextType {
@@ -39,7 +40,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   logInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
-  deleteAccount: () => Promise<void>;
+  deleteAccount: (confirmSubscriptionCancellation?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,11 +58,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let unsubscribe: (() => void) | undefined;
 
-    const onAuthChange = onAuthStateChanged(auth, (currentUser) => {
+    const onAuthChange = onAuthStateChanged(auth, async (currentUser) => {
       if (unsubscribe) {
         unsubscribe();
         unsubscribe = undefined;
       }
+
+      // メール・パスワード認証の場合のみメール確認チェックを行う
+      // Google ログインなどのプロバイダーは通常確認済みとして扱われる
+      if (currentUser && currentUser.providerData.some(p => p.providerId === 'password') && !currentUser.emailVerified) {
+        setUser(null);
+        setUserData(null);
+        setLoading(false);
+        
+        // セッションが残っている場合にのみログアウトを実行
+        await signOut(auth);
+        
+        toast({
+          variant: "destructive",
+          title: "メールアドレスが未確認です",
+          description: "送信されたメールからアカウントを有効化してください。確認後に再度ログインが可能です。",
+        });
+        return;
+      }
+
       setUser(currentUser);
 
       if (currentUser) {
@@ -238,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [toast]);
 
-  const deleteAccount = useCallback(async () => {
+  const deleteAccount = useCallback(async (confirmSubscriptionCancellation?: boolean) => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
       toast({ variant: "destructive", title: "エラー", description: "ログインしていません。" });
@@ -254,6 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify({ confirmSubscriptionCancellation }),
       });
 
       if (!response.ok) {
@@ -270,7 +291,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       toast({ title: "アカウントが正常に削除されました" });
-      await signOut(auth);
+      
+      // メモリ（ChartContext等）を完全にクリアするため、リロードを伴う遷移を行う
+      window.location.href = '/';
 
     } catch (error: any) {
       console.error('Error deleting account:', error);

@@ -33,12 +33,13 @@ export default function PricingPage() {
     }
 
     try {
+      const token = await user.getIdToken();
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ userId: user.uid, userEmail: user.email }),
       });
 
       if (response.ok) {
@@ -46,18 +47,15 @@ export default function PricingPage() {
         if (session.url) {
           window.location.href = session.url;
         } else {
-          // This case should ideally not happen if the API is consistent
           throw new Error('Checkout session URL not found in response.');
         }
-      } else if (response.status === 409) {
+      } else {
         const errorData = await response.json();
         toast({
-          title: "登録済みです",
-          description: errorData.message || "このメールアドレスは既に有効なサブスクリプションを持っています。",
+          title: "エラーが発生しました",
+          description: errorData.message || "決済セッションの作成に失敗しました。",
           variant: "destructive",
         });
-      } else {
-        throw new Error('Failed to create checkout session.');
       }
     } catch (error) {
       console.error("Error during premium registration:", error);

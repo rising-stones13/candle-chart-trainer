@@ -59,8 +59,14 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const customerEmail = session.customer_details?.email;
 
         if (userId && typeof customerId === 'string') {
+          // 顧客オブジェクトのメタデータを更新して後日特定可能にする
+          await stripe.customers.update(customerId, {
+            name: customerEmail || undefined,
+            metadata: { firebase_uid: userId }
+          });
+
           const userRef = db.collection('users').doc(userId);
-          const updateData: any = { isPremium: true, stripeCustomerId: customerId };
+          const updateData: any = { isPremium: true, stripeCustomerId: customerId, cancelAtPeriodEnd: false };
           if (subscriptionId) {
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             updateData.stripeSubscriptionId = subscription.id;
@@ -78,6 +84,20 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         }
         break;
       }
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any).id;
+        const snapshot = await db.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
+        if (!snapshot.empty) {
+          const userDoc = snapshot.docs[0];
+          await userDoc.ref.update({
+            cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
+            currentPeriodEnd: subscription.current_period_end ?? null,
+            isPremium: subscription.status === 'active' || subscription.status === 'past_due',
+          });
+        }
+        break;
+      }
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any).id;
@@ -87,6 +107,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             isPremium: false,
             stripeSubscriptionId: null,
             currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
           });
         }
         break;
@@ -113,25 +134,46 @@ app.use(cors());
 
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
-    const { userId, userEmail } = req.body;
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : null;
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { auth } = await getFirebaseAdmin();
+    const decodedToken = await auth.verifyIdToken(token);
+    const userId = decodedToken.uid;
+    const userEmail = decodedToken.email;
+
     console.log(`[create-checkout-session] Starting session for user: ${userId}, email: ${userEmail}`);
     
     const secrets = await getSecrets();
-    
-    if (!secrets['STRIPE_SECRET_KEY']) {
-      console.error('[create-checkout-session] STRIPE_SECRET_KEY is missing');
+    const stripeSecretKey = secrets['STRIPE_SECRET_KEY'];
+    if (!stripeSecretKey) {
       return res.status(500).json({ error: 'STRIPE_SECRET_KEY is missing' });
     }
     
-    const stripe = new Stripe(secrets['STRIPE_SECRET_KEY'], { apiVersion: '2025-01-27.acacia' as any });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-01-27.acacia' as any });
 
-    console.log(`[create-checkout-session] Looking up customer for email: ${userEmail}`);
+    // 1. 既存顧客の検索
     const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
     let customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
-    console.log(`[create-checkout-session] Customer ID: ${customerId || 'New Customer'}`);
+
+    // 2. 重複購入チェック (Task 1-2)
+    if (customerId) {
+      const activeSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'active',
+        limit: 1,
+      });
+      if (activeSubscriptions.data.length > 0) {
+        return res.status(400).json({ 
+          error: 'Already Subscribed', 
+          message: '既に有効なサブスクリプションを持っています。' 
+        });
+      }
+    }
 
     const baseUrl = secrets['VITE_APP_URL'] || req.headers.origin || 'http://localhost:3000';
-    const priceId = secrets['VITE_STRIPE_PREMIUM_PRICE_ID'];
+    const priceId = secrets['VITE_STRIPE_PREMIUM_PRICE_ID'] || 'price_1TBIy458QC2YRyBj54t1E3t0';
     console.log(`[create-checkout-session] Base URL: ${baseUrl}, Price ID: ${priceId}`);
 
     if (!priceId) {
@@ -191,11 +233,21 @@ app.post('/api/sync-stripe-status', async (req, res) => {
       const customers = await stripe.customers.list({ email: userData.email, limit: 1 });
       if (customers.data.length > 0) {
         customerId = customers.data[0].id;
+        // メタデータを更新して後日特定可能にする
+        await stripe.customers.update(customerId, {
+          metadata: { firebase_uid: userId }
+        });
         await userRef.update({ stripeCustomerId: customerId });
       }
     }
 
     if (customerId) {
+      console.log(`[sync-stripe-status] Fetching and updating Stripe customer: ${customerId}`);
+      // 既存顧客に対しても確実にメタデータを紐付ける
+      await stripe.customers.update(customerId, {
+        metadata: { firebase_uid: userId }
+      }).catch(err => console.error('[sync-stripe-status] Failed to update customer metadata:', err));
+
       console.log(`[sync-stripe-status] Fetching subscriptions for customer: ${customerId}`);
       const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
       if (subscriptions.data.length > 0) {
@@ -203,7 +255,8 @@ app.post('/api/sync-stripe-status', async (req, res) => {
         await userRef.update({ 
           isPremium: true, 
           stripeSubscriptionId: sub.id, 
-          currentPeriodEnd: (sub as any).current_period_end 
+          currentPeriodEnd: (sub as any).current_period_end,
+          cancelAtPeriodEnd: sub.cancel_at_period_end
         });
       } else {
         await userRef.update({ isPremium: false, stripeSubscriptionId: null, currentPeriodEnd: null });
@@ -236,13 +289,14 @@ app.post('/api/cancel-subscription', async (req, res) => {
     const custId = userData?.stripeCustomerId;
     const email = userData?.email;
 
-    if (subId) await stripe.subscriptions.cancel(subId);
-    if (custId) await stripe.customers.del(custId);
+    if (subId) {
+      // 即時キャンセルではなく「期間終了時に解約」を設定
+      await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
+    }
 
+    // 権限は維持し、解約予約フラグのみを立てる
     await userRef.update({
-      stripeSubscriptionId: null,
-      stripeCustomerId: null,
-      isPremium: false,
+      cancelAtPeriodEnd: true,
     });
 
     if (email) {
@@ -261,6 +315,7 @@ app.post('/api/cancel-subscription', async (req, res) => {
 
 app.post('/api/delete-account', async (req, res) => {
   try {
+    const { confirmSubscriptionCancellation } = req.body;
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : null;
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
@@ -269,7 +324,29 @@ app.post('/api/delete-account', async (req, res) => {
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
 
-    await db.collection('users').doc(userId).delete();
+    const userRef = db.collection('users').doc(userId);
+    const userData = (await userRef.get()).data();
+    const subId = userData?.stripeSubscriptionId;
+
+    // プレミアムプランの場合のチェック
+    if (userData?.isPremium && !confirmSubscriptionCancellation) {
+      return res.status(400).json({ 
+        message: 'プレミアムプランの自動解除に対する同意が必要です。' 
+      });
+    }
+
+    // 退会時にサブスクリプションが残っている場合はキャンセル
+    if (subId) {
+      const secrets = await getSecrets();
+      const stripe = new Stripe(secrets['STRIPE_SECRET_KEY'], { apiVersion: '2025-01-27.acacia' as any });
+      try {
+        await stripe.subscriptions.cancel(subId);
+      } catch (e) {
+        console.error('[delete-account] Failed to cancel subscription:', e);
+      }
+    }
+
+    await userRef.delete();
     await auth.deleteUser(userId);
     res.json({ success: true });
   } catch (error: any) {

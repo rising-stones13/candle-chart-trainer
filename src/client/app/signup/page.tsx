@@ -24,7 +24,7 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       await signUp(email, password);
-      router('/'); // 登録成功後、ホームページにリダイレクト
+      router('/login'); // 登録成功後、ログイン画面にリダイレクトして確認を促す
     } catch (error: any) {
       console.error(error);
       toast({ 
