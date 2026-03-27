@@ -24,11 +24,15 @@ interface AppState {
   downColor: string;
   isDemoData: boolean;
   isWalkthroughOpen: boolean;
+  currency: string;
+  originalCurrency?: string;
+  exchangeRate?: number;
+  conversionFactor: number;
 }
 
 // Define the actions
 type Action =
-  | { type: 'SET_CHART_DATA'; payload: { data: CandleData[]; title: string } }
+  | { type: 'SET_CHART_DATA'; payload: { data: CandleData[]; title: string; currency?: string; originalCurrency?: string; exchangeRate?: number; conversionFactor?: number } }
   | { type: 'START_REPLAY'; payload: Date }
   | { type: 'NEXT_DAY' }
   | { type: 'TRADE'; payload: 'long' | 'short' }
@@ -75,13 +79,15 @@ const initialState: AppState = {
   downColor: '#26a69a',
   isDemoData: false,
   isWalkthroughOpen: false,
+  currency: 'JPY',
+  conversionFactor: 1,
 };
 
 // Reducer function
 function chartReducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'SET_CHART_DATA': {
-      const { data, title } = action.payload;
+      const { data, title, currency, originalCurrency, exchangeRate, conversionFactor } = action.payload;
       const isDemoData = title.includes('デモ株式会社') || title.includes('サンプルデータ');
       return {
         ...state,
@@ -90,6 +96,10 @@ function chartReducer(state: AppState, action: Action): AppState {
         chartTitle: title,
         fileLoaded: true,
         isDemoData,
+        currency: currency || 'JPY',
+        originalCurrency,
+        exchangeRate,
+        conversionFactor: conversionFactor || 1,
         // セッション固有の状態のみリセット
         replayIndex: null,
         isReplay: false,
@@ -113,7 +123,7 @@ function chartReducer(state: AppState, action: Action): AppState {
       const currentPrice = state.chartData[newIndex].close;
       const unrealizedPL = state.positions.reduce((acc, pos) => {
         const pl = pos.type === 'long' ? (currentPrice - pos.avgPrice) * pos.totalSize : (pos.avgPrice - currentPrice) * pos.totalSize;
-        return acc + pl;
+        return acc + (pl * state.conversionFactor); // 換算係数を掛ける
       }, 0);
       return { ...state, replayIndex: newIndex, unrealizedPL };
     }
@@ -158,7 +168,7 @@ function chartReducer(state: AppState, action: Action): AppState {
 
       const unrealizedPL = newPositions.reduce((acc, pos) => {
         const pl = pos.type === 'long' ? (currentPrice - pos.avgPrice) * pos.totalSize : (pos.avgPrice - currentPrice) * pos.totalSize;
-        return acc + pl;
+        return acc + (pl * state.conversionFactor); // 換算係数を掛ける
       }, 0);
 
       return { ...state, positions: newPositions, unrealizedPL };
@@ -177,9 +187,11 @@ function chartReducer(state: AppState, action: Action): AppState {
       const entryToClose = pos.entries[0];
       const closeAmount = entryToClose.size;
 
-      const profit = pos.type === 'long'
+      const profit_original = pos.type === 'long'
         ? (currentPrice - entryToClose.price) * closeAmount
         : (entryToClose.price - currentPrice) * closeAmount;
+
+      const profit = profit_original * state.conversionFactor; // 換算係数を掛ける
 
       const newTrade: Trade = {
         id: entryToClose.id,
@@ -212,7 +224,7 @@ function chartReducer(state: AppState, action: Action): AppState {
       
       const unrealizedPL = newPositions.reduce((acc, p) => {
         const pl = p.type === 'long' ? (currentPrice - p.avgPrice) * p.totalSize : (p.avgPrice - currentPrice) * p.totalSize;
-        return acc + pl;
+        return acc + (pl * state.conversionFactor); // 換算係数を掛ける
       }, 0);
 
       return {
@@ -236,10 +248,11 @@ function chartReducer(state: AppState, action: Action): AppState {
       const newTrades: Trade[] = [];
 
       for (const entry of posToClose.entries) {
-        const profit = posToClose.type === 'long'
+        const profit_original = posToClose.type === 'long'
           ? (currentPrice - entry.price) * entry.size
           : (entry.price - currentPrice) * entry.size;
         
+        const profit = profit_original * state.conversionFactor; // 換算係数を掛ける
         realizedPLUpdate += profit;
 
         newTrades.push({
@@ -257,7 +270,7 @@ function chartReducer(state: AppState, action: Action): AppState {
       const newPositions = state.positions.filter(p => p.type !== type);
       const newUnrealizedPL = newPositions.reduce((acc, p) => {
         const pl = p.type === 'long' ? (currentPrice - p.avgPrice) * p.totalSize : (p.avgPrice - currentPrice) * p.totalSize;
-        return acc + pl;
+        return acc + (pl * state.conversionFactor); // 換算係数を掛ける
       }, 0);
 
       return {

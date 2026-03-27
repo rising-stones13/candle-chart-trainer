@@ -5,11 +5,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useChart } from '@/context/ChartContext'; // Import the new context
 import { generateWeeklyData, parseStockData, calculateRSI, calculateMACD } from '@/lib/data-helpers';
+import { fetchExchangeRate, convertPrices } from '@/lib/exchange-rate';
 import { StockChart, WeeklyChart } from './stock-chart';
 import { FloatingWindow } from './floating-window';
 import { TradePanel } from './trade-panel';
 import { LineChart, Loader2, FolderOpen, AreaChart, Info, HelpCircle } from 'lucide-react';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { WalkthroughGuide, WalkthroughStep } from './ui/walkthrough-guide';
@@ -108,9 +110,21 @@ export default function ChartTradeTrainer() {
         const response = await fetch('/data/dummy-stock-data.json');
         if (!response.ok) throw new Error('Failed to fetch dummy data');
         const fileContent = await response.text();
-        const { data, meta } = parseStockData(fileContent);
+        let { data, meta } = parseStockData(fileContent);
+        
+        let currency = meta.currency;
+        let exchangeRate: number | undefined;
+        let conversionFactor = 1;
+
+        if (currency && currency !== 'JPY') {
+            const baseCurrency = currency === 'USX' ? 'USD' : currency;
+            const rate = await fetchExchangeRate(baseCurrency, 'JPY');
+            exchangeRate = rate;
+            conversionFactor = currency === 'USX' ? rate / 100 : rate;
+        }
+
         const title = meta.longName ? `${meta.longName} (${meta.symbol})` : 'サンプルデータ';
-        dispatch({ type: 'SET_CHART_DATA', payload: { data, title } });
+        dispatch({ type: 'SET_CHART_DATA', payload: { data, title, currency, exchangeRate, conversionFactor } });
         
         // 初回のみウォークスルーを自動表示（ローカルストレージ確認）
         const hasSeenWalkthrough = localStorage.getItem('hasSeenWalkthrough');
@@ -146,8 +160,20 @@ export default function ChartTradeTrainer() {
     setIsLoading(true);
     try {
       const fileContent = await file.text();
-      const { data, meta } = parseStockData(fileContent);
+      let { data, meta } = parseStockData(fileContent);
       
+      const originalCurrency = meta?.currency;
+      const currency = originalCurrency;
+      let exchangeRate: number | undefined;
+      let conversionFactor = 1;
+
+      if (currency && currency !== 'JPY') {
+        const baseCurrency = currency === 'USX' ? 'USD' : currency;
+        const rate = await fetchExchangeRate(baseCurrency, 'JPY');
+        exchangeRate = rate;
+        conversionFactor = currency === 'USX' ? rate / 100 : rate;
+      }
+
       const displayName = meta?.longName || meta?.shortName;
       let title = file.name;
       
@@ -159,6 +185,11 @@ export default function ChartTradeTrainer() {
         title = meta.symbol;
       }
 
+      // 換算した場合はタイトルに明記
+      if (originalCurrency && originalCurrency !== 'JPY') {
+        title += ' [損益のみ円換算]';
+      }
+
       const weeklyData = generateWeeklyData(data);
       if (data[0]) {
         console.log('Daily data[0].time:', data[0].time, 'Type:', typeof data[0].time);
@@ -167,7 +198,7 @@ export default function ChartTradeTrainer() {
         console.log('Weekly data[0].time:', weeklyData[0].time, 'Type:', typeof weeklyData[0].time);
       }
 
-      dispatch({ type: 'SET_CHART_DATA', payload: { data, title } });
+      dispatch({ type: 'SET_CHART_DATA', payload: { data, title, currency, originalCurrency, exchangeRate, conversionFactor } });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'ファイルの処理中にエラーが発生しました。';
       toast({ variant: 'destructive', title: 'エラー', description: errorMessage });
@@ -263,7 +294,24 @@ export default function ChartTradeTrainer() {
                 </Tooltip>
             </TooltipProvider>
             <div className="border-l h-6 mx-2"></div>
-            <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>
+            <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                    <h1 className="text-lg font-bold truncate">{state.chartTitle}</h1>
+                    {state.fileLoaded && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 whitespace-nowrap">
+                            単位: {state.currency === 'JPY' ? '円 (JPY)' : state.currency}
+                        </Badge>
+                    )}
+                </div>
+                {state.exchangeRate && (
+                    <span className="text-[10px] text-muted-foreground leading-none">
+                        {state.originalCurrency === 'USX' 
+                          ? `1 USX = ${(state.exchangeRate / 100).toFixed(4)} JPY で換算`
+                          : `1 ${state.originalCurrency} = ${state.exchangeRate.toFixed(2)} JPY で換算`
+                        }
+                    </span>
+                )}
+            </div>
             <div className="flex items-center gap-2 ml-auto">
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} disabled={isLoading} />
                 <Button id="wt-file-open" onClick={() => fileInputRef.current?.click()} disabled={isLoading} size="sm">

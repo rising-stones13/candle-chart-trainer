@@ -15,6 +15,7 @@ import {
   SeriesMarker
 } from 'lightweight-charts';
 import { calculateMA } from '@/lib/data-helpers';
+import { useChart } from '@/context/ChartContext';
 import type { CandleData, Trade, MAConfig, MacdData, LineData, PositionEntry, VolumeConfig } from '@/types';
 
 const getChartOptions = (upColor: string, downColor: string, title: string) => ({
@@ -79,6 +80,8 @@ export interface WeeklyChartProps {
 }
 
 export function WeeklyChart({ data, upColor, downColor, maConfigs, isPremium, replayIndex, dailyChartData }: WeeklyChartProps) {
+  const { state } = useChart();
+  const currency = state.currency || 'JPY';
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -210,6 +213,8 @@ export function StockChart({
   isPremium,
   chartTitle,
 }: StockChartProps) {
+  const { state } = useChart();
+  const currency = state.currency || 'JPY';
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<Record<string, ISeriesApi<any>>>({});

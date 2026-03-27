@@ -15,6 +15,7 @@ import { Separator } from './ui/separator';
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { useChart } from '@/context/ChartContext';
 
 interface TradePanelProps {
   fileLoaded: boolean;
@@ -45,12 +46,28 @@ export function TradePanel({
   onDateChange,
   isDemoData = false,
 }: TradePanelProps) {
+  const { state } = useChart();
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const { userData } = useAuth();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
+    const currency = state.currency || 'JPY';
+    return new Intl.NumberFormat('ja-JP', { 
+      style: 'currency', 
+      currency: currency, 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: currency === 'JPY' ? 0 : 2 
+    }).format(value);
+  };
+
+  const formatPL = (value: number) => {
+    return new Intl.NumberFormat('ja-JP', { 
+      style: 'currency', 
+      currency: 'JPY', 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 0 
+    }).format(value);
   };
   
   const totalPL = realizedPL + unrealizedPL;
@@ -131,15 +148,15 @@ export function TradePanel({
         <div className="grid grid-cols-3 gap-1 mb-2 text-center">
             <div className="rounded-md bg-muted p-1 flex flex-col justify-center">
                 <div className="text-[10px] text-muted-foreground">評価損益</div>
-                <div className={`text-xs font-bold ${unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(unrealizedPL)}</div>
+                <div className={`text-xs font-bold ${unrealizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatPL(unrealizedPL)}</div>
             </div>
             <div className="rounded-md bg-muted p-1 flex flex-col justify-center">
                 <div className="text-[10px] text-muted-foreground">確定損益</div>
-                <div className={`text-xs font-bold ${realizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(realizedPL)}</div>
+                <div className={`text-xs font-bold ${realizedPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>{formatPL(realizedPL)}</div>
             </div>
             <div className="rounded-md bg-card-foreground p-1 flex flex-col justify-center text-background">
                 <div className="text-[10px]">合計</div>
-                <div className={`text-xs font-bold ${totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{formatCurrency(totalPL)}</div>
+                <div className={`text-xs font-bold ${totalPL >= 0 ? 'text-green-300' : 'text-red-300'}`}>{formatPL(totalPL)}</div>
             </div>
         </div>
 
