@@ -92,7 +92,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           const userDoc = snapshot.docs[0];
           await userDoc.ref.update({
             cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
-            currentPeriodEnd: subscription.current_period_end ?? null,
+            currentPeriodEnd: (subscription as any).current_period_end ?? null,
             isPremium: subscription.status === 'active' || subscription.status === 'past_due',
           });
         }
@@ -182,7 +182,6 @@ app.post('/api/create-checkout-session', async (req, res) => {
     }
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
       line_items: [{
         price: priceId,
         quantity: 1,
@@ -190,9 +189,9 @@ app.post('/api/create-checkout-session', async (req, res) => {
       mode: 'subscription',
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
-      metadata: { userId, userEmail },
-      customer: customerId,
-      customer_email: customerId ? undefined : userEmail,
+      metadata: { userId, userEmail: userEmail || '' },
+      customer: customerId || undefined,
+      customer_email: customerId ? undefined : (userEmail || undefined),
     });
     console.log(`[create-checkout-session] Session created: ${session.id}`);
     res.json({ url: session.url });
