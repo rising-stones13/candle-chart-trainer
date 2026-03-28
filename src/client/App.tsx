@@ -2,16 +2,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ChartProvider } from './context/ChartContext';
 import { ClientProviders } from './components/providers/client-providers';
-import Home from './app/page'; // とりあえず既存のファイルを読み込む (後で調整)
-import LoginPage from './app/login/page';
-import SignupPage from './app/signup/page';
-import SettingsPage from './app/settings/page';
-import PricingPage from './app/pricing/page';
-import SuccessPage from './app/success/page';
-import HelpPage from './app/help/page';
-import TermsPage from './app/terms/page';
-import PrivacyPage from './app/privacy/page';
-import LegalPage from './app/legal/page';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import SettingsPage from './pages/SettingsPage';
+import PricingPage from './pages/PricingPage';
+import SuccessPage from './pages/SuccessPage';
+import HelpPage from './pages/HelpPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import LegalPage from './pages/LegalPage';
 
 function App() {
   return (
@@ -20,7 +20,7 @@ function App() {
         <ChartProvider>
           <div className="dark min-h-screen bg-background text-foreground font-body">
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/settings" element={<SettingsPage />} />
