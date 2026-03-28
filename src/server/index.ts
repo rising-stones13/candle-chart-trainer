@@ -18,8 +18,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-// IDXなどの環境でPORTが設定されている場合、Viteと競合するため開発環境では3001を優先する
-const PORT = process.env.NODE_ENV === 'production' ? (process.env.PORT || 3001) : 3005;
+// 開発環境は3005、本番環境は指定のポート（または3001）を使用
+const isDev = process.env.NODE_ENV === 'development';
+const PORT = isDev ? 3005 : (process.env.PORT || 3001);
 
 // ミドルウェア
 app.use(morgan('dev'));
@@ -59,7 +60,6 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const customerEmail = session.customer_details?.email;
 
         if (userId && typeof customerId === 'string') {
-          // 顧客オブジェクトのメタデータを更新して後日特定可能にする
           await stripe.customers.update(customerId, {
             name: customerEmail || undefined,
             metadata: { firebase_uid: userId }
@@ -143,8 +143,6 @@ app.post('/api/create-checkout-session', async (req, res) => {
     const userId = decodedToken.uid;
     const userEmail = decodedToken.email;
 
-    console.log(`[create-checkout-session] Starting session for user: ${userId}, email: ${userEmail}`);
-    
     const secrets = await getSecrets();
     const stripeSecretKey = secrets['STRIPE_SECRET_KEY'];
     if (!stripeSecretKey) {
@@ -153,11 +151,9 @@ app.post('/api/create-checkout-session', async (req, res) => {
     
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-01-27.acacia' as any });
 
-    // 1. 既存顧客の検索
     const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
     let customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
 
-    // 2. 重複購入チェック (Task 1-2)
     if (customerId) {
       const activeSubscriptions = await stripe.subscriptions.list({
         customer: customerId,
@@ -174,10 +170,8 @@ app.post('/api/create-checkout-session', async (req, res) => {
 
     const baseUrl = secrets['VITE_APP_URL'] || req.headers.origin || 'http://localhost:3000';
     const priceId = secrets['VITE_STRIPE_PREMIUM_PRICE_ID'] || 'price_1TBIy458QC2YRyBj54t1E3t0';
-    console.log(`[create-checkout-session] Base URL: ${baseUrl}, Price ID: ${priceId}`);
 
     if (!priceId) {
-      console.error('[create-checkout-session] Price ID is missing');
       return res.status(500).json({ error: 'Price ID is missing' });
     }
 
@@ -193,7 +187,6 @@ app.post('/api/create-checkout-session', async (req, res) => {
       customer: customerId || undefined,
       customer_email: customerId ? undefined : (userEmail || undefined),
     });
-    console.log(`[create-checkout-session] Session created: ${session.id}`);
     res.json({ url: session.url });
   } catch (error: any) {
     console.error('[create-checkout-session] ERROR:', error);
@@ -205,49 +198,20 @@ app.post('/api/sync-stripe-status', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : null;
-    if (!token) {
-      console.warn('[sync-stripe-status] No token provided');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     const { auth, db } = await getFirebaseAdmin();
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
-    console.log(`[sync-stripe-status] Syncing for user: ${userId}`);
 
     const secrets = await getSecrets();
-    if (!secrets['STRIPE_SECRET_KEY']) {
-      console.error('[sync-stripe-status] Missing STRIPE_SECRET_KEY');
-      return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
-    }
-    
     const stripe = new Stripe(secrets['STRIPE_SECRET_KEY'], { apiVersion: '2025-01-27.acacia' as any });
 
     const userRef = db.collection('users').doc(userId);
     const userData = (await userRef.get()).data();
     let customerId = userData?.stripeCustomerId;
 
-    if (!customerId && userData?.email) {
-      console.log(`[sync-stripe-status] Looking up Stripe customer for email: ${userData.email}`);
-      const customers = await stripe.customers.list({ email: userData.email, limit: 1 });
-      if (customers.data.length > 0) {
-        customerId = customers.data[0].id;
-        // メタデータを更新して後日特定可能にする
-        await stripe.customers.update(customerId, {
-          metadata: { firebase_uid: userId }
-        });
-        await userRef.update({ stripeCustomerId: customerId });
-      }
-    }
-
     if (customerId) {
-      console.log(`[sync-stripe-status] Fetching and updating Stripe customer: ${customerId}`);
-      // 既存顧客に対しても確実にメタデータを紐付ける
-      await stripe.customers.update(customerId, {
-        metadata: { firebase_uid: userId }
-      }).catch(err => console.error('[sync-stripe-status] Failed to update customer metadata:', err));
-
-      console.log(`[sync-stripe-status] Fetching subscriptions for customer: ${customerId}`);
       const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
       if (subscriptions.data.length > 0) {
         const sub = subscriptions.data[0];
@@ -263,7 +227,6 @@ app.post('/api/sync-stripe-status', async (req, res) => {
     }
     res.json({ message: 'Synced' });
   } catch (error: any) {
-    console.error('[sync-stripe-status] CRITICAL ERROR:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -285,18 +248,13 @@ app.post('/api/cancel-subscription', async (req, res) => {
     const userRef = db.collection('users').doc(userId);
     const userData = (await userRef.get()).data();
     const subId = userData?.stripeSubscriptionId;
-    const custId = userData?.stripeCustomerId;
     const email = userData?.email;
 
     if (subId) {
-      // 即時キャンセルではなく「期間終了時に解約」を設定
       await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
     }
 
-    // 権限は維持し、解約予約フラグのみを立てる
-    await userRef.update({
-      cancelAtPeriodEnd: true,
-    });
+    await userRef.update({ cancelAtPeriodEnd: true });
 
     if (email) {
       await resend.emails.send({
@@ -327,22 +285,14 @@ app.post('/api/delete-account', async (req, res) => {
     const userData = (await userRef.get()).data();
     const subId = userData?.stripeSubscriptionId;
 
-    // プレミアムプランの場合のチェック
     if (userData?.isPremium && !confirmSubscriptionCancellation) {
-      return res.status(400).json({ 
-        message: 'プレミアムプランの自動解除に対する同意が必要です。' 
-      });
+      return res.status(400).json({ message: 'プレミアムプランの自動解除に対する同意が必要です。' });
     }
 
-    // 退会時にサブスクリプションが残っている場合はキャンセル
     if (subId) {
       const secrets = await getSecrets();
       const stripe = new Stripe(secrets['STRIPE_SECRET_KEY'], { apiVersion: '2025-01-27.acacia' as any });
-      try {
-        await stripe.subscriptions.cancel(subId);
-      } catch (e) {
-        console.error('[delete-account] Failed to cancel subscription:', e);
-      }
+      await stripe.subscriptions.cancel(subId).catch(() => {});
     }
 
     await userRef.delete();
@@ -353,30 +303,22 @@ app.post('/api/delete-account', async (req, res) => {
   }
 });
 
-app.get('/api/check-env', async (req, res) => {
-  console.log('GET /api/check-env requested');
-  const secrets = await getSecrets();
-  res.json({
-    FIREBASE_PROJECT_ID: !!secrets.FIREBASE_PROJECT_ID,
-    STRIPE_SECRET_KEY: !!secrets.STRIPE_SECRET_KEY,
-    RESEND_API_KEY: !!secrets.RESEND_API_KEY,
-    NODE_ENV: process.env.NODE_ENV,
-  });
-});
-
+// 静的ファイルの配信（本番環境用）
 const distPath = path.resolve(__dirname, '../../dist/client');
-console.log(`Static files path: ${distPath}`);
 app.use(express.static(distPath));
 
 app.get('*', (req, res) => {
-  console.log(`GET * requested: ${req.path}`);
   if (req.path.startsWith('/api')) {
-    return res.status(404).json({ error: 'Not Found', path: req.path });
+    return res.status(404).json({ error: 'API Endpoint Not Found' });
   }
-  res.sendFile(path.join(distPath, 'index.html'));
+  // 本番環境のみ index.html を返す（開発時はViteが担当する）
+  if (!isDev) {
+    res.sendFile(path.join(distPath, 'index.html'));
+  } else {
+    res.status(404).send('Not Found in Dev Mode (Vite should handle this)');
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log(`🚀 Express Server running on port ${PORT} (Mode: ${process.env.NODE_ENV})`);
 });
