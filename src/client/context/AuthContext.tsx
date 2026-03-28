@@ -16,6 +16,7 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   GoogleAuthProvider, 
   signInWithPopup,
 } from 'firebase/auth';
@@ -40,6 +41,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   logInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   deleteAccount: (confirmSubscriptionCancellation?: boolean) => Promise<void>;
 }
 
@@ -258,6 +260,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [toast]);
 
+  const sendPasswordReset = useCallback(async (email: string) => {
+    try {
+      auth.languageCode = 'ja';
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      console.error('Password Reset Error:', error);
+      let message = "パスワードリセットメールの送信に失敗しました。";
+      if (error.code === 'auth/user-not-found') {
+        message = "このメールアドレスは登録されていません。";
+      } else if (error.code === 'auth/invalid-email') {
+        message = "メールアドレスの形式が正しくありません。";
+      }
+      toast({ variant: "destructive", title: "エラー", description: message });
+      throw error;
+    }
+  }, [toast]);
+
   const deleteAccount = useCallback(async (confirmSubscriptionCancellation?: boolean) => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
@@ -314,9 +333,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp, 
     logInWithGoogle, 
     logOut, 
+    sendPasswordReset,
     deleteAccount 
   }), [
-    user, userData, loading, logIn, signUp, logInWithGoogle, logOut, deleteAccount, router
+    user, userData, loading, logIn, signUp, logInWithGoogle, logOut, sendPasswordReset, deleteAccount, router
   ]);
 
   if (!mounted) {

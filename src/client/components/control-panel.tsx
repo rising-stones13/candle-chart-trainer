@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Sigma, Palette, AreaChart, BarChart, BarChart4 } from 'lucide-react';
 import { SidebarGroup, SidebarGroupContent } from './ui/sidebar';
-import type { MAConfig, RSIConfig, MACDConfig, VolumeConfig } from '@/types';
+import type { MAConfig, RSIConfig, MACDConfig, VolumeConfig } from '@shared/types';
 import { Input } from './ui/input';
 import { Separator } from './ui/separator';
 import { useAuth } from '@/context/AuthContext';

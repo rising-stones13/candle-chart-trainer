@@ -208,8 +208,19 @@ app.post('/api/sync-stripe-status', async (req, res) => {
     const stripe = new Stripe(secrets['STRIPE_SECRET_KEY'], { apiVersion: '2025-01-27.acacia' as any });
 
     const userRef = db.collection('users').doc(userId);
-    const userData = (await userRef.get()).data();
+    const userDoc = await userRef.get();
+    const userData = userDoc.data();
     let customerId = userData?.stripeCustomerId;
+    const userEmail = decodedToken.email;
+
+    // もし Firestore に Customer ID がない場合、Stripe 側をメールアドレスで検索
+    if (!customerId && userEmail) {
+      const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+        await userRef.update({ stripeCustomerId: customerId });
+      }
+    }
 
     if (customerId) {
       const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
@@ -218,14 +229,15 @@ app.post('/api/sync-stripe-status', async (req, res) => {
         await userRef.update({ 
           isPremium: true, 
           stripeSubscriptionId: sub.id, 
+          stripeCustomerId: customerId, // 確実に更新
           currentPeriodEnd: (sub as any).current_period_end,
           cancelAtPeriodEnd: sub.cancel_at_period_end
         });
       } else {
-        await userRef.update({ isPremium: false, stripeSubscriptionId: null, currentPeriodEnd: null });
+        await userRef.update({ isPremium: false, stripeSubscriptionId: null });
       }
     }
-    res.json({ message: 'Synced' });
+    res.json({ message: 'Synced', customerId });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

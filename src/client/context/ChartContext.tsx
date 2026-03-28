@@ -1,7 +1,13 @@
 
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { CandleData, MAConfig, RSIConfig, MACDConfig, VolumeConfig, Position, Trade } from '@/types';
-import { generateWeeklyData } from '@/lib/data-helpers';
+import { CandleData, MAConfig, RSIConfig, MACDConfig, VolumeConfig, Position, Trade } from '@shared/types';
+import { generateWeeklyData } from '@/lib/data-transformations';
+import { 
+  calculateUnrealizedPL, 
+  processTrade, 
+  processClosePartial, 
+  processCloseAll 
+} from '@/lib/trading-logic';
 
 // Define the shape of the state
 interface AppState {
@@ -44,7 +50,8 @@ type Action =
   | { type: 'TOGGLE_VOLUME' }
   | { type: 'RESET_PREMIUM_FEATURES' }
   | { type: 'TOGGLE_WEEKLY_CHART' }
-  | { type: 'SET_CANDLE_COLOR'; payload: { target: 'upColor' | 'downColor'; color: string } };
+  | { type: 'SET_CANDLE_COLOR'; payload: { target: 'upColor' | 'downColor'; color: string } }
+  | { type: 'TOGGLE_WALKTHROUGH'; payload?: boolean };
 
 // Initial state values
 const initialMAConfigs: Record<string, MAConfig> = {
@@ -121,164 +128,53 @@ function chartReducer(state: AppState, action: Action): AppState {
       }
       const newIndex = state.replayIndex + 1;
       const currentPrice = state.chartData[newIndex].close;
-      const unrealizedPL = state.positions.reduce((acc, pos) => {
-        const pl = pos.type === 'long' ? (currentPrice - pos.avgPrice) * pos.totalSize : (pos.avgPrice - currentPrice) * pos.totalSize;
-        return acc + (pl * state.conversionFactor); // 換算係数を掛ける
-      }, 0);
+      const unrealizedPL = calculateUnrealizedPL(state.positions, currentPrice, state.conversionFactor);
       return { ...state, replayIndex: newIndex, unrealizedPL };
     }
     case 'TRADE': {
       if (state.replayIndex === null) return state;
-      const type = action.payload;
-      const currentPrice = state.chartData[state.replayIndex].close;
-      const currentTime = state.chartData[state.replayIndex].time;
-
-      const existingPosIndex = state.positions.findIndex(p => p.type === type);
-      let newPositions = [...state.positions];
-
-      const newEntry: PositionEntry = {
-        id: Math.random().toString(36).substring(2, 9),
-        price: currentPrice,
-        size: 100, // 100単位ずつ取引
-        date: currentTime,
-      };
-
-      if (existingPosIndex >= 0) {
-        // 既存ポジションの更新
-        const pos = newPositions[existingPosIndex];
-        const newEntries = [...pos.entries, newEntry];
-        const newSize = newEntries.reduce((sum, e) => sum + e.size, 0);
-        const newAvgPrice = newEntries.reduce((sum, e) => sum + (e.price * e.size), 0) / newSize;
-        
-        newPositions[existingPosIndex] = {
-          ...pos,
-          entries: newEntries,
-          totalSize: newSize,
-          avgPrice: newAvgPrice
-        };
-      } else {
-        // 新規ポジションの作成
-        newPositions.push({
-          type,
-          entries: [newEntry],
-          totalSize: newEntry.size,
-          avgPrice: newEntry.price,
-        });
-      }
-
-      const unrealizedPL = newPositions.reduce((acc, pos) => {
-        const pl = pos.type === 'long' ? (currentPrice - pos.avgPrice) * pos.totalSize : (pos.avgPrice - currentPrice) * pos.totalSize;
-        return acc + (pl * state.conversionFactor); // 換算係数を掛ける
-      }, 0);
-
-      return { ...state, positions: newPositions, unrealizedPL };
+      const { positions, unrealizedPL } = processTrade(
+        state.positions,
+        action.payload,
+        state.chartData[state.replayIndex].close,
+        state.chartData[state.replayIndex].time,
+        state.conversionFactor
+      );
+      return { ...state, positions, unrealizedPL };
     }
     case 'CLOSE_PARTIAL_POSITION': {
       if (state.replayIndex === null) return state;
-      const { type } = action.payload; // amount is ignored, we close one entry (FIFO)
-      const currentPrice = state.chartData[state.replayIndex].close;
-      const currentTime = state.chartData[state.replayIndex].time;
-
-      const posIndex = state.positions.findIndex(p => p.type === type);
-      if (posIndex === -1 || state.positions[posIndex].entries.length === 0) return state;
-
-      const pos = state.positions[posIndex];
-      // FIFO: oldest entry is closed
-      const entryToClose = pos.entries[0];
-      const closeAmount = entryToClose.size;
-
-      const profit_original = pos.type === 'long'
-        ? (currentPrice - entryToClose.price) * closeAmount
-        : (entryToClose.price - currentPrice) * closeAmount;
-
-      const profit = profit_original * state.conversionFactor; // 換算係数を掛ける
-
-      const newTrade: Trade = {
-        id: entryToClose.id,
-        type,
-        entryPrice: entryToClose.price,
-        exitPrice: currentPrice,
-        size: closeAmount,
-        entryDate: entryToClose.date,
-        exitDate: currentTime,
-        profit,
-      };
-
-      const remainingEntries = pos.entries.slice(1);
-      let newPositions = [...state.positions];
-
-      if (remainingEntries.length === 0) {
-        // Position fully closed
-        newPositions.splice(posIndex, 1);
-      } else {
-        // Position partially closed
-        const newSize = remainingEntries.reduce((sum, e) => sum + e.size, 0);
-        const newAvgPrice = remainingEntries.reduce((sum, e) => sum + (e.price * e.size), 0) / newSize;
-        newPositions[posIndex] = {
-          ...pos,
-          entries: remainingEntries,
-          totalSize: newSize,
-          avgPrice: newAvgPrice,
-        };
-      }
-      
-      const unrealizedPL = newPositions.reduce((acc, p) => {
-        const pl = p.type === 'long' ? (currentPrice - p.avgPrice) * p.totalSize : (p.avgPrice - currentPrice) * p.totalSize;
-        return acc + (pl * state.conversionFactor); // 換算係数を掛ける
-      }, 0);
-
+      const result = processClosePartial(
+        state.positions,
+        action.payload.type,
+        state.chartData[state.replayIndex].close,
+        state.chartData[state.replayIndex].time,
+        state.conversionFactor
+      );
+      if (!result) return state;
       return {
         ...state,
-        positions: newPositions,
-        tradeHistory: [newTrade, ...state.tradeHistory],
-        realizedPL: state.realizedPL + profit,
-        unrealizedPL
+        positions: result.positions,
+        tradeHistory: [result.newTrade, ...state.tradeHistory],
+        realizedPL: state.realizedPL + result.profit,
+        unrealizedPL: result.unrealizedPL
       };
     }
     case 'CLOSE_ALL_POSITIONS_OF_TYPE': {
-      const { type } = action.payload;
       if (state.replayIndex === null) return state;
-      
-      const posToClose = state.positions.find(p => p.type === type);
-      if (!posToClose) return state;
-
-      const currentPrice = state.chartData[state.replayIndex].close;
-      const currentTime = state.chartData[state.replayIndex].time;
-      let realizedPLUpdate = 0;
-      const newTrades: Trade[] = [];
-
-      for (const entry of posToClose.entries) {
-        const profit_original = posToClose.type === 'long'
-          ? (currentPrice - entry.price) * entry.size
-          : (entry.price - currentPrice) * entry.size;
-        
-        const profit = profit_original * state.conversionFactor; // 換算係数を掛ける
-        realizedPLUpdate += profit;
-
-        newTrades.push({
-          id: entry.id,
-          type: posToClose.type,
-          entryPrice: entry.price,
-          exitPrice: currentPrice,
-          size: entry.size,
-          entryDate: entry.date,
-          exitDate: currentTime,
-          profit,
-        });
-      }
-
-      const newPositions = state.positions.filter(p => p.type !== type);
-      const newUnrealizedPL = newPositions.reduce((acc, p) => {
-        const pl = p.type === 'long' ? (currentPrice - p.avgPrice) * p.totalSize : (p.avgPrice - currentPrice) * p.totalSize;
-        return acc + (pl * state.conversionFactor); // 換算係数を掛ける
-      }, 0);
-
+      const result = processCloseAll(
+        state.positions,
+        action.payload.type,
+        state.chartData[state.replayIndex].close,
+        state.chartData[state.replayIndex].time,
+        state.conversionFactor
+      );
       return {
         ...state,
-        positions: newPositions,
-        tradeHistory: [...newTrades, ...state.tradeHistory],
-        realizedPL: state.realizedPL + realizedPLUpdate,
-        unrealizedPL: newUnrealizedPL,
+        positions: result.positions,
+        tradeHistory: [...result.newTrades, ...state.tradeHistory],
+        realizedPL: state.realizedPL + result.realizedPLUpdate,
+        unrealizedPL: result.unrealizedPL,
       };
     }
     case 'TOGGLE_WEEKLY_CHART':

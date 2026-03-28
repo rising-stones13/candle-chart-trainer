@@ -104,21 +104,21 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
   const NavContent = () => (
     <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
       <Link
-        href="/"
+        to="/"
         onClick={() => setIsMobileNavOpen(false)}
         className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/' ? 'bg-muted' : ''}`}>
         <Home className="h-4 w-4" />
         ホーム
       </Link>
       <Link
-        href="/settings"
+        to="/settings"
         onClick={() => setIsMobileNavOpen(false)}
         className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/settings' ? 'bg-muted' : ''}`}>
         <Settings className="h-4 w-4" />
         アカウント設定
       </Link>
       <Link
-        href="/help"
+        to="/help"
         onClick={() => setIsMobileNavOpen(false)}
         className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${pathname === '/help' ? 'bg-muted' : ''}`}>
         <CircleHelp className="h-4 w-4" />
@@ -136,21 +136,21 @@ export default function DashboardLayout({ children, controlPanelProps }: Dashboa
   const LegalLinks = () => (
     <div className="flex flex-col gap-1 px-2 lg:px-4 py-2 border-t">
       <Link
-        href="/terms"
+        to="/terms"
         onClick={() => setIsMobileNavOpen(false)}
         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm font-medium">
         <FileText className="h-4 w-4" />
         利用規約
       </Link>
       <Link
-        href="/privacy"
+        to="/privacy"
         onClick={() => setIsMobileNavOpen(false)}
         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm font-medium">
         <Shield className="h-4 w-4" />
         プライバシーポリシー
       </Link>
       <Link
-        href="/legal"
+        to="/legal"
         onClick={() => setIsMobileNavOpen(false)}
         className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm font-medium">
         <Scale className="h-4 w-4" />

@@ -1,5 +1,6 @@
 
-import type { Position } from '@/types';
+import React from 'react';
+import type { Position } from '@shared/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,7 +13,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Separator } from './ui/separator';
-import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useChart } from '@/context/ChartContext';

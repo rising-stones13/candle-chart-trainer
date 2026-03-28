@@ -6,7 +6,7 @@ import { XIcon, GripVerticalIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
-interface FloatingWindowProps {
+interface DraggableWindowProps {
   children: (size: { width: number; height: number }) => ReactNode;
   title: string;
   isOpen: boolean;

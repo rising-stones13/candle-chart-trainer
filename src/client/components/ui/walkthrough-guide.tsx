@@ -11,6 +11,7 @@ export interface WalkthroughStep {
   position?: 'top' | 'bottom' | 'left' | 'right';
   onEnter?: () => void;
   onLeave?: () => void;
+  onTargetClick?: () => void;
   advanceOnClick?: boolean; // ターゲットをクリックしたら次へ進む
 }
 
@@ -185,7 +186,7 @@ export function WalkthroughGuide({ steps, isOpen, onClose, onComplete }: Walkthr
       />
 
       {/* Proxy Click Layer for advanceOnClick */}
-      {currentStep.advanceOnClick && (
+      {(currentStep.advanceOnClick || currentStep.onTargetClick) && (
         <div
           className="absolute cursor-pointer"
           style={{
@@ -198,14 +199,22 @@ export function WalkthroughGuide({ steps, isOpen, onClose, onComplete }: Walkthr
           }}
           onClick={(e) => {
             e.stopPropagation();
+            
+            if (currentStep.onTargetClick) {
+                currentStep.onTargetClick();
+            }
+            
             const element = document.querySelector(currentStep.target) as HTMLElement;
             if (element) {
                 element.click();
             }
-            // 少し待ってから次へ進む（操作の結果を確認させるため）
-            setTimeout(() => {
-              handleNext();
-            }, 1000);
+            
+            if (currentStep.advanceOnClick) {
+                // 少し待ってから次へ進む（操作の結果を確認させるため）
+                setTimeout(() => {
+                  handleNext();
+                }, 1000);
+            }
           }}
         />
       )}

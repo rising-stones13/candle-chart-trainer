@@ -1,4 +1,3 @@
-
 import { useNavigate as useRouter } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -8,11 +7,38 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function SuccessPage() {
   const router = useRouter();
-  // reSyncUserを削除し、シンプルに
-  const { userData, loading: authLoading } = useAuth();
+  const { user, userData, loading: authLoading } = useAuth();
   const [message, setMessage] = useState('決済情報を確認しています...');
 
-  // isPremiumがtrueになったらリダイレクトするロジック（変更なし）
+  // 決済完了の同期処理
+  useEffect(() => {
+    const syncStatus = async () => {
+      if (!user) return;
+
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch('/api/sync-stripe-status', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          console.log('[SuccessPage] Stripe status synced successfully');
+        }
+      } catch (error) {
+        console.error('[SuccessPage] Error syncing status:', error);
+      }
+    };
+
+    if (user && !authLoading) {
+      syncStatus();
+    }
+  }, [user, authLoading]);
+
+  // isPremiumがtrueになったらリダイレクトするロジック
   useEffect(() => {
     if (!authLoading) {
       if (userData?.isPremium) {
@@ -25,15 +51,16 @@ export default function SuccessPage() {
     }
   }, [userData, authLoading, router]);
 
-  // フォールバック用のタイムアウト処理のみ残す
+  // フォールバック用のタイムアウト処理
   useEffect(() => {
     const fallbackTimeout = setTimeout(() => {
-      // onSnapshotが機能しない場合に備えたフォールバックメッセージ
-      setMessage('処理に時間がかかっています。お手数ですが、一度ホームに戻り、再ログインをお試しください。');
-    }, 30000); // 30 seconds
+      if (!userData?.isPremium) {
+        setMessage('処理に時間がかかっています。お手数ですが、一度ホームに戻り、再ログインをお試しください。');
+      }
+    }, 15000); // 15 seconds (reduced from 30)
 
     return () => clearTimeout(fallbackTimeout);
-  }, []);
+  }, [userData]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-foreground">
@@ -44,9 +71,12 @@ export default function SuccessPage() {
       <p className="text-muted-foreground mb-8 text-center max-w-md">
         プレミアムプランへの登録処理を行っています。この処理は通常数秒で完了します。この画面を閉じないでください。
       </p>
-      <Link to="/">
-        <Button variant="outline" size="sm">ホームに戻る</Button>
-      </Link>
+      <div className="flex gap-4">
+        <Link to="/">
+          <Button variant="outline" size="sm">ホームに戻る</Button>
+        </Link>
+      </div>
     </div>
   );
 }
+
